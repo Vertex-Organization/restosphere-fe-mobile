@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "RestoSphere",
-    "slug": "restosphere-fe-mobile",
+    "slug": "restosphere-fe-staff",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "restospherefemobile",
-    "userInterfaceStyle": "automatic",
+    "scheme": "restospherefestaff",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -28,7 +28,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F8F7F2"
+          "backgroundColor": "#F7F5F1"
         }
       ]
     ],

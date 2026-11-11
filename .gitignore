@@ -50,6 +50,7 @@ yarn-error.*
 /.vscode/
 /.idea/
 /.vs/
+/.agents/
 /.claude/
 /.codex/
 *.suo
@@ -67,3 +68,6 @@ Desktop.ini
 *.orig.*
 /tmp/
 /temp/
+
+# Local design review reports, browser profiles and preview builds
+/.taste-skill/

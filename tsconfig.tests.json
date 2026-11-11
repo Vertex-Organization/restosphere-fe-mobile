@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": [],
+    "rootDir": "src",
+    "outDir": ".cache/tests"
+  },
+  "include": [
+    "src/features/reservations/commands.ts",
+    "src/features/reservations/rules.ts",
+    "src/mocks/demo-data.ts",
+    "src/mocks/auth-repository.ts",
+    "src/utils/dates.ts"
+  ]
+}

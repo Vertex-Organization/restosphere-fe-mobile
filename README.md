@@ -1,8 +1,10 @@
-# RestoSphere Mobile
+# RestoSphere Staff
 
-Ứng dụng mobile của RestoSphere, xây dựng bằng **Expo SDK 58**, **React Native** và **TypeScript**, sử dụng **Expo Router** để điều hướng.
+Ứng dụng dành cho nhân viên RestoSphere, xây dựng bằng **Expo SDK 58**, **React Native** và **TypeScript**, sử dụng **Expo Router** để điều hướng. Một codebase chạy trên điện thoại, tablet (iOS/Android) và trình duyệt desktop: màn hình hẹp dùng tab dưới, màn hình rộng từ 1024px (desktop, tablet ngang) dùng sidebar bên trái.
 
-Hiện tại dự án có một màn hình hiển thị: **Giao diện mobile đã khởi tạo thành công**. Chưa cần cấu hình `.env`, API hay cơ sở dữ liệu để chạy.
+Mỗi vai trò có khu vực làm việc riêng: **Lễ tân** (`/reception`), **Phục vụ/Order** (`/waiter`), **Thu ngân** (`/cashier`), **Bếp** (`/kitchen`) và **Admin** (`/admin`). Hiện đã có module **Lễ tân** với đăng nhập nhân viên, đặt bàn, quản lý lịch và bàn, check-in, tiếp nhận khách trực tiếp, bàn giao, thông báo và hồ sơ. Các khu vực còn lại mới có thư mục, chưa có màn hình. Toàn bộ nghiệp vụ sử dụng dữ liệu mô phỏng lưu cục bộ; không cần `.env`, API hay cơ sở dữ liệu.
+
+Đăng nhập demo: tài khoản **`receptionist`**, mật khẩu **`123456`**. Xem [hướng dẫn dùng thử, chính sách và kiểm thử](docs/reception-demo.md).
 
 ## 1. Chuẩn bị môi trường
 
@@ -22,12 +24,24 @@ npm --version
 Nếu đã clone và đang mở terminal trong thư mục dự án, chỉ cần chạy `npm ci`.
 
 ```bash
-git clone https://github.com/Vertex-Organization/restosphere-fe-mobile.git
-cd restosphere-fe-mobile
+git clone https://github.com/Vertex-Organization/restosphere-fe-staff.git
+cd restosphere-fe-staff
 npm ci
 ```
 
 Dự án sử dụng **npm** và `package-lock.json`. Lệnh `npm ci` cài đúng các phiên bản đã được khóa trong repository.
+
+### Biến môi trường (tùy chọn)
+
+Sao chép `.env.example` thành `.env` tại thư mục gốc. Trên PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+`EXPO_PUBLIC_API_URL` đang để trống, dành cho lúc tích hợp backend; ứng dụng demo hiện chưa đọc biến này. `.env` và các biến thể môi trường được Git bỏ qua; `.env.example` được giữ trong repository.
+
+Theo [tài liệu Expo về biến môi trường](https://docs.expo.dev/guides/environment-variables/), các biến có tiền tố `EXPO_PUBLIC_` được đưa vào mã ứng dụng khi sử dụng. Chỉ dùng chúng cho cấu hình công khai, không chứa mật khẩu, token bí mật hoặc khóa riêng tư.
 
 ## 3. Chạy dự án
 
@@ -51,7 +65,7 @@ Trên iPhone thật, Expo CLI trên máy tính và Expo Go cần đăng nhập *
 npx expo login
 ```
 
-Khi kết nối thành công, ứng dụng sẽ hiện dòng **Giao diện mobile đã khởi tạo thành công**.
+Khi kết nối thành công, ứng dụng sẽ hiện màn hình **Đăng nhập nhân viên**. Sau đăng nhập, bạn có thể thử các luồng Lễ tân bằng dữ liệu mẫu theo ngày hiện tại.
 
 ### Trên trình duyệt
 
@@ -59,7 +73,7 @@ Khi kết nối thành công, ứng dụng sẽ hiện dòng **Giao diện mobil
 npm run web
 ```
 
-Mở địa chỉ được hiển thị trong terminal nếu trình duyệt chưa tự mở. Cách này không cần điện thoại hoặc phần mềm giả lập.
+Mở địa chỉ được hiển thị trong terminal nếu trình duyệt chưa tự mở. Cách này không cần điện thoại hoặc phần mềm giả lập. Cửa sổ rộng từ 1024px hiển thị giao diện desktop với sidebar; thu hẹp cửa sổ để xem giao diện điện thoại.
 
 ### Trên máy giả lập
 
@@ -74,13 +88,14 @@ Nếu đã chạy `npm start`, có thể nhấn `a` để mở Android Emulator,
 
 ## 4. Chỉnh sửa và kiểm tra code
 
-Chỉnh nội dung màn hình tại `src/app/index.tsx`. Lưu file để xem thay đổi qua Fast Refresh.
+Routes và layout nằm tại `src/app/`, chia theo khu vực vai trò (`src/app/reception/`…). Màn hình và nghiệp vụ nằm tại `src/features/`, chia theo domain để các vai trò dùng chung (xem [Cấu trúc dự án](#cấu-trúc-dự-án)). Lưu file để xem thay đổi qua Fast Refresh.
 
 Chạy các kiểm tra trước khi commit:
 
 ```bash
 npm run lint
 npm run typecheck
+npm test
 ```
 
 Khi cần thêm thư viện Expo hoặc React Native, dùng lệnh sau để Expo chọn phiên bản tương thích với SDK:
@@ -110,18 +125,63 @@ npm start -- --clear
 ## Cấu trúc dự án
 
 ```text
-src/app/
-  _layout.tsx       # Điều hướng và thanh trạng thái
-  index.tsx         # Màn hình chính và style
-assets/             # Icon ứng dụng
-app.json            # Cấu hình Expo
-package.json        # Dependency và các lệnh npm
-package-lock.json   # Khóa phiên bản dependency
-eslint.config.js    # Cấu hình lint
-tsconfig.json       # Cấu hình TypeScript
+src/
+  app/                    # Expo Router: chỉ chứa route và layout
+    _layout.tsx           # Provider, chặn route theo vai trò (Stack.Protected)
+    index.tsx             # Chuyển nhân viên tới khu vực của vai trò
+    login.tsx, +html.tsx, +not-found.tsx
+    reception/            # Lễ tân: /reception/... (4 tab + màn hình chi tiết)
+    waiter/               # Phục vụ/Order: /waiter/...   (chuẩn bị sẵn)
+    cashier/              # Thu ngân: /cashier/...       (chuẩn bị sẵn)
+    kitchen/              # Bếp: /kitchen/...            (chuẩn bị sẵn)
+    admin/                # Admin: /admin/...            (chuẩn bị sẵn)
+  features/               # Nghiệp vụ theo domain, dùng chung giữa các vai trò
+    auth/                 # Vai trò, nhân viên, đăng nhập, trang cá nhân
+    reservations/         # Đặt bàn: types, labels, rules, commands, components, screens
+    tables/               # Bàn: types, labels, components, screens
+    notifications/        # Thông báo
+  components/
+    ui/                   # Button, Field, Select, DateField, ConfirmDialog… (mỗi component một file)
+    layout/               # Screen, WorkspaceTabs (tab dưới/sidebar), WorkspaceHeader
+    brand-logo.tsx
+  hooks/                  # use-wide-layout: nhận biết màn hình rộng
+  mocks/                  # Dữ liệu demo, lưu cục bộ, đăng nhập giả (thay bằng API khi có backend)
+  store/                  # Context state, phiên đăng nhập và hàng đợi lưu
+  utils/                  # Hàm ngày giờ và tìm kiếm không dấu
+  theme.ts                # Màu, bo góc, chữ, kích thước layout
+tests/                    # Unit test nghiệp vụ bằng Node test runner
+assets/                   # Icon ứng dụng
+app.json                  # Cấu hình Expo
 ```
 
-Component, hook và tiện ích dùng chung khi bổ sung sau này đặt ngoài `src/app/`, vì thư mục này dành cho route và layout của Expo Router.
+Quy ước:
+
+- `src/app/` chỉ chứa route; mỗi file route chỉ re-export màn hình từ `src/features/`.
+- Import trong file giao diện (`.tsx`) dùng alias `@/` (ví dụ `@/components/ui`). File nghiệp vụ thuần (`types`, `labels`, `rules`, `commands`, `mocks`, `utils`) dùng import tương đối để `npm test` chạy được bằng Node.
+- Thành phần UI dùng chung không phụ thuộc state; thành phần cần state đặt trong `components/layout/` hoặc trong feature.
+
+### Thêm khu vực cho một vai trò
+
+Ví dụ thu ngân:
+
+1. Tạo `src/app/cashier/_layout.tsx` (Stack) và `src/app/cashier/(tabs)/_layout.tsx` dùng `WorkspaceTabs` với danh sách tab của thu ngân.
+2. Thêm `Stack.Protected` cho `cashier` trong `src/app/_layout.tsx` và hướng chuyển trang trong `src/app/index.tsx`.
+3. Đặt màn hình và nghiệp vụ mới trong `src/features/<domain>/` (ví dụ `orders/`, `payments/`), tái sử dụng `tables/`, `reservations/` khi cần.
+
+## Expo Skills cho Codex và Claude Code
+
+Có thể cài cục bộ 23 Expo skill tại `.agents/skills/` (Codex) và `.claude/skills/`
+(Claude Code). Các thư mục này được Git bỏ qua, cần cài riêng sau khi clone.
+Xem [cách gọi skill, danh sách và cài đặt](docs/expo-skills.md).
+
+Trong chat Codex, dùng `$expo-overview <yêu cầu>`; trong Claude Code, dùng
+`/expo-overview <yêu cầu>`. Mở lượt hoặc phiên mới sau khi cài để agent nhận skill.
+
+## Taste Skill
+
+Có thể cài cục bộ `design-taste-frontend` cho Codex và Claude Code; file skill
+được Git bỏ qua. Skill này chuyên thiết kế website; xem
+[cách cài, cách gọi và phạm vi dùng với mobile](docs/taste-skill.md).
 
 ## Tài liệu tham khảo
 
