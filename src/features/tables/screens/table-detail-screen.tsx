@@ -29,10 +29,10 @@ export default function TableDetailScreen() {
       (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
     );
   const current = related.find((r) => r.status === "SEATED");
-  const holds = related.filter((r) => holdsTable(r));
-  const upcoming = holds.filter(
-    (r) => r.status !== "SEATED" && endsAt(heldRange(r)) > now,
-  );
+  const holds = related.filter((r) => holdsTable(r) && (r.status === "SEATED" || endsAt(heldRange(r)) > now))
+    .sort((a, b) => Number(b.status === "SEATED") - Number(a.status === "SEATED") || new Date(heldRange(a).startsAt).getTime() - new Date(heldRange(b).startsAt).getTime());
+  const heldIds = new Set(holds.map((r) => r.id));
+  const otherRelated = related.filter((r) => !heldIds.has(r.id));
   return (
     <Screen>
       <View style={ui.row}>
@@ -61,34 +61,22 @@ export default function TableDetailScreen() {
       <Section title="Khung giờ giữ bàn">
         {holds.length ? (
           holds.map((r) => (
-            <View key={r.id} style={ui.panel}>
-              <Text style={ui.text}>
-                {r.code} · {r.customer.name}
-              </Text>
-              <Text style={ui.muted}>
-                {dateTimeLabel(heldRange(r).startsAt)} →{" "}
-                {dateTimeLabel(endsAt(heldRange(r)))} (+15 phút đệm)
-              </Text>
-            </View>
+            <ReservationListItem key={r.id} reservation={r} trailing={
+              <View style={{ gap: 4 }}>
+                <Text style={ui.caption}>{r.status === "SEATED" ? "Sử dụng bàn" : "Giữ chỗ"}: {dateTimeLabel(heldRange(r).startsAt)} – {dateTimeLabel(endsAt(heldRange(r)))}</Text>
+                <Text style={ui.caption}>Thêm 15 phút đệm giữa các lượt.</Text>
+              </View>
+            } />
           ))
         ) : (
-          <EmptyState title="Chưa có khung giờ giữ bàn" />
+          <Text style={ui.muted}>Chưa có khung giờ giữ bàn.</Text>
         )}
       </Section>
-      <Section title="Lịch sắp tới">
-        {upcoming.length ? (
-          upcoming.map((r) => (
-            <ReservationListItem key={r.id} reservation={r} />
-          ))
+      <Section title="Các lịch khác liên quan">
+        {otherRelated.length ? (
+          otherRelated.map((r) => <ReservationListItem key={r.id} reservation={r} />)
         ) : (
-          <Text style={ui.muted}>Không có lịch sắp tới.</Text>
-        )}
-      </Section>
-      <Section title="Các lịch liên quan">
-        {related.length ? (
-          related.map((r) => <ReservationListItem key={r.id} reservation={r} />)
-        ) : (
-          <Text style={ui.muted}>Chưa có lịch liên quan.</Text>
+          <Text style={ui.muted}>Không có lịch khác liên quan.</Text>
         )}
       </Section>
     </Screen>

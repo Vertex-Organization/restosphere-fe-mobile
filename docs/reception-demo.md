@@ -9,9 +9,9 @@ npm start
 
 Mở bằng Expo Go tương thích SDK 58 trên iOS/Android. Đăng nhập bằng tài khoản
 `receptionist`, mật khẩu `123456`. Đây là thông tin cố định chỉ dùng demo.
-Không chọn vai trò trong giao diện. Không có màn hình của phục vụ, bếp, thu ngân
-hoặc admin; thư mục route của các khu vực này (`src/app/waiter`, `cashier`,
-`kitchen`, `admin`) đã được tạo sẵn.
+Không chọn vai trò trong giao diện. Module phục vụ có tài khoản riêng `waiter` /
+`123456` và dùng chung dữ liệu bàn giao; xem [hướng dẫn WAITER](waiter-implementation.md).
+Bếp, Thu ngân và Admin chưa có màn hình.
 
 ## Phạm vi đã triển khai
 

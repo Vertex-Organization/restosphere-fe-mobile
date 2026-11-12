@@ -15,6 +15,9 @@ import type {
 import { mockAuthenticationRepository } from "@/mocks/auth-repository";
 import { createMockState } from "@/mocks/demo-data";
 import { mockReceptionRepository } from "@/mocks/reception-repository";
+import { executeWaiterCommand } from "@/features/waiter/commands";
+import type { WaiterCommand } from "@/features/waiter/types";
+import { applyMockServiceEvent, type MockServiceEvent } from "@/mocks/service-workflow";
 
 interface Store {
   state: ReceptionState;
@@ -25,6 +28,8 @@ interface Store {
   signIn(username: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   run(command: ReceptionCommand): string | undefined;
+  runWaiter(command: WaiterCommand): void;
+  runDevelopmentMock(event: MockServiceEvent): void;
   dismissNotice(): void;
   retrySave(): void;
 }
@@ -103,6 +108,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (command.type !== "read") setNotice("Đã cập nhật dữ liệu.");
     return result.reservationId;
   }
+  function runWaiter(command: WaiterCommand) {
+    void commit(executeWaiterCommand(current.current, command, new Date()));
+    const messages: Partial<Record<WaiterCommand["type"], string>> = {
+      accept: "Đã tiếp nhận bàn.", submit: "Đã gửi lượt món xuống bếp.", serve: "Đã xác nhận phục vụ món.",
+      "request-payment": "Đã gửi yêu cầu cho thu ngân.", "guest-left": "Đã xác nhận khách rời. Bàn cần dọn.", clean: "Bàn đã dọn xong và sẵn sàng.",
+    };
+    if (messages[command.type]) setNotice(messages[command.type]!);
+  }
+  function runDevelopmentMock(event: MockServiceEvent) {
+    if (!__DEV__ || current.current.session?.role !== "WAITER") throw new Error("Công cụ mô phỏng chỉ dùng trong môi trường phát triển.");
+    void commit(applyMockServiceEvent(current.current, event));
+    setNotice("Đã phát sự kiện mô phỏng.");
+  }
   return (
     <Context.Provider
       value={{
@@ -114,6 +132,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         run,
+        runWaiter,
+        runDevelopmentMock,
         dismissNotice: () => setNotice(""),
         retrySave: () => {
           void persist(current.current);

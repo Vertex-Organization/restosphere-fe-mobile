@@ -7,6 +7,8 @@ import type {
 } from "../features/reservations/types";
 import { TABLE_LABELS } from "../features/tables/labels";
 import { addMinutes, dayKey } from "../utils/dates";
+import { DEMO_WAITER, OTHER_WAITER, emptyServiceData, isValidServiceData, seedWaiterScenarios } from "./waiter-data";
+import { syncHandovers } from "../features/waiter/handover";
 
 export const DEMO_STAFF: Staff = {
   id: "NV001",
@@ -175,7 +177,8 @@ export function createMockState(now = new Date()): ReceptionState {
     "Lượt đã kết thúc",
     "Lịch bị hủy",
   ];
-  return {
+  const state: ReceptionState = {
+    ...emptyServiceData(DEMO_STAFF),
     version: 1,
     seedDay: dayKey(now),
     session: null,
@@ -203,6 +206,8 @@ export function createMockState(now = new Date()): ReceptionState {
       reservationId: r.id,
     })),
   };
+  seedWaiterScenarios(state, now);
+  return state;
 }
 
 // Versioned storage; old demo dates are reseeded on the next launch, preserving
@@ -275,12 +280,21 @@ export function restoreDemoState(
     )
   )
     throw new Error("Nội dung dữ liệu demo không hợp lệ.");
-  // Never trust a stored role: restore only the single demo account.
-  const session =
-    saved.session?.id === "NV001" && saved.session.role === "RECEPTIONIST"
-      ? { ...DEMO_STAFF }
-      : null;
-  return saved.seedDay === fresh.seedDay
-    ? { ...saved, session }
-    : { ...fresh, session };
+  // Restore only known demo identities, never a role supplied in storage.
+  const known = [DEMO_STAFF, DEMO_WAITER, OTHER_WAITER].find((s) => s.id === saved.session?.id && s.role === saved.session?.role);
+  const session = known ? { ...known } : null;
+  if (saved.seedDay !== fresh.seedDay) return { ...fresh, session };
+  const upgraded = saved.serviceVersion === undefined
+    ? { ...saved, ...emptyServiceData(DEMO_STAFF), session }
+    : { ...saved, session };
+  syncHandovers(upgraded);
+  if (!isValidServiceData(upgraded)) throw new Error("Dữ liệu phục vụ lưu trên thiết bị không hợp lệ.");
+  // Add the new demo seafood selection without changing saved prices, orders or availability.
+  for (const category of fresh.menuCategories) {
+    if (!upgraded.menuCategories.some((c) => c.id === category.id)) upgraded.menuCategories.push(category);
+  }
+  for (const item of fresh.menuItems) {
+    if (!upgraded.menuItems.some((m) => m.id === item.id)) upgraded.menuItems.push(item);
+  }
+  return upgraded;
 }

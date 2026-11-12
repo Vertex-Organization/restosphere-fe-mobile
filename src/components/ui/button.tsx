@@ -10,6 +10,8 @@ export function Button({
   testID,
   icon,
   style,
+  accessibilityLabel,
+  size = "md",
 }: {
   title: string;
   onPress(): void;
@@ -18,20 +20,23 @@ export function Button({
   testID?: string;
   icon?: IconName;
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
+  size?: "sm" | "md";
 }) {
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [{
-        minHeight: 48,
+        minHeight: size === "sm" ? 44 : 48,
         justifyContent: "center",
         alignItems: "center",
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: size === "sm" ? 10 : 12,
+        paddingHorizontal: size === "sm" ? 12 : 16,
         borderRadius: radius.control,
         borderCurve: "continuous",
         flexDirection: "row",

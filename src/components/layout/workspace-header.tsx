@@ -7,6 +7,7 @@ import { ROLE_LABELS } from "@/features/auth/roles";
 import { useWideLayout } from "@/hooks/use-wide-layout";
 import { useApp } from "@/store/app-store";
 import { colors, layout, radius, typography } from "@/theme";
+import { visibleNotifications } from "@/features/waiter/selectors";
 
 export function WorkspaceHeader({
   title,
@@ -20,7 +21,9 @@ export function WorkspaceHeader({
   const { state } = useApp();
   const insets = useSafeAreaInsets();
   const wide = useWideLayout();
-  const unread = state.notifications.filter((n) => !n.read).length;
+  const unread = state.session?.role === "WAITER"
+    ? visibleNotifications(state).filter((n) => !n.readBy.includes(state.session!.id)).length
+    : state.notifications.filter((n) => !n.read).length;
   const initials = state.session?.name.split(" ").slice(-2).map((part) => part[0]).join("");
   const actions = (
     <View style={styles.actions}>
@@ -54,10 +57,10 @@ export function WorkspaceHeader({
       </View>
     );
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
       <View style={styles.inner}>
         <View style={styles.topRow}>
-          <View style={styles.brand}><BrandLogo width={176} /></View>
+          <View style={styles.brand}><BrandLogo width={148} /></View>
           {actions}
         </View>
         <View style={styles.bottomRow}>
@@ -73,7 +76,7 @@ export function WorkspaceHeader({
 
 const styles = StyleSheet.create({
   header: { backgroundColor: colors.background, paddingHorizontal: layout.pagePadding, paddingBottom: 4 },
-  inner: { width: "100%", maxWidth: layout.maxWidth - layout.pagePadding * 2, alignSelf: "center", gap: 12 },
+  inner: { width: "100%", maxWidth: layout.maxWidth - layout.pagePadding * 2, alignSelf: "center", gap: 6 },
   wideRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   brand: { flexDirection: "row", alignItems: "center", gap: 9, flex: 1 },

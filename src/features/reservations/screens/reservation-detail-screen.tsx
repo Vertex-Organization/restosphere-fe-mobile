@@ -51,6 +51,11 @@ export default function ReservationDetailScreen() {
   const table = state.tables.find((t) => t.id === r.tableId);
   const area = state.areas.find((a) => a.id === table?.areaId);
   const actions = getReservationActions(r, now, state.session!.role);
+  const nextAction: ReservationAction | undefined = r.status === "PENDING" ? "confirm"
+    : r.status === "CONFIRMED" ? "check-in"
+    : r.status === "ARRIVED" ? (table ? "handover" : "assign") : undefined;
+  const primaryAction = nextAction && actions.includes(nextAction) ? nextAction : undefined;
+  const otherActions = actions.filter((action) => action !== primaryAction);
   const candidate = r.tableId ?? getAvailableTables(state, r, r.id, now)[0]?.id;
   function act(action: ReservationAction) {
     setError("");
@@ -76,14 +81,17 @@ export default function ReservationDetailScreen() {
         <Text style={ui.title}>{r.code}</Text>
         <StatusBadge status={r.status} />
       </View>
+      <View style={{ gap: 4 }}>
+        <Text style={ui.heading}>{r.customer.name}</Text>
+        <Text style={ui.muted}>{dateTimeLabel(r.startsAt)} · {r.actualGuests ?? r.guests} khách</Text>
+      </View>
       {!!error && <Message>{error}</Message>}
+      {primaryAction && <Button title={ACTION_LABELS[primaryAction]} onPress={() => act(primaryAction)} />}
       <View style={ui.panel}>
-        <DetailRow label="Khách hàng" value={r.customer.name} />
         <DetailRow
           label="Số điện thoại"
           value={r.customer.phone || "Không cung cấp"}
         />
-        <DetailRow label="Ngày giờ hẹn" value={dateTimeLabel(r.startsAt)} />
         <DetailRow
           label="Khách dự kiến / thực tế"
           value={`${r.guests} / ${r.actualGuests ?? "Chưa đến"}`}
@@ -144,22 +152,20 @@ export default function ReservationDetailScreen() {
           checkout hoặc dọn bàn.
         </Message>
       )}
-      <View style={{ gap: 10 }}>
-        {actions.map((action) => (
+      {!!otherActions.length && <Section title="Thao tác khác">
+        {otherActions.map((action) => (
           <Button
             key={action}
             title={ACTION_LABELS[action]}
             variant={
               ["reject", "cancel", "no-show"].includes(action)
                 ? "danger"
-                : ["edit", "assign"].includes(action)
-                  ? "secondary"
-                  : "primary"
+                : "secondary"
             }
             onPress={() => act(action)}
           />
         ))}
-      </View>
+      </Section>}
       <Section title="Lịch sử">
         {r.history
           .slice()

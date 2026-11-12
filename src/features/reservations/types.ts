@@ -1,6 +1,7 @@
 import type { Staff } from "../auth/types";
 import type { ReceptionNotification } from "../notifications/types";
 import type { RestaurantArea, RestaurantTable } from "../tables/types";
+import type { ServiceData } from "../waiter/types";
 
 export type ReservationStatus =
   | "PENDING"
@@ -43,7 +44,7 @@ export interface TableAssignment {
   assignedAt: string;
   releasedAt?: string;
 }
-export interface ReceptionState {
+export interface ReceptionState extends ServiceData {
   version: 1;
   seedDay: string;
   session: Staff | null;

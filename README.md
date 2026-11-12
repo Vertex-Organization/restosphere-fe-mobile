@@ -2,9 +2,11 @@
 
 Ứng dụng dành cho nhân viên RestoSphere, xây dựng bằng **Expo SDK 58**, **React Native** và **TypeScript**, sử dụng **Expo Router** để điều hướng. Một codebase chạy trên điện thoại, tablet (iOS/Android) và trình duyệt desktop: màn hình hẹp dùng tab dưới, màn hình rộng từ 1024px (desktop, tablet ngang) dùng sidebar bên trái.
 
-Mỗi vai trò có khu vực làm việc riêng: **Lễ tân** (`/reception`), **Phục vụ/Order** (`/waiter`), **Thu ngân** (`/cashier`), **Bếp** (`/kitchen`) và **Admin** (`/admin`). Hiện đã có module **Lễ tân** với đăng nhập nhân viên, đặt bàn, quản lý lịch và bàn, check-in, tiếp nhận khách trực tiếp, bàn giao, thông báo và hồ sơ. Các khu vực còn lại mới có thư mục, chưa có màn hình. Toàn bộ nghiệp vụ sử dụng dữ liệu mô phỏng lưu cục bộ; không cần `.env`, API hay cơ sở dữ liệu.
+Mỗi vai trò có khu vực làm việc riêng: **Lễ tân** (`/reception`), **Phục vụ/Order** (`/waiter`), **Thu ngân** (`/cashier`), **Bếp** (`/kitchen`) và **Admin** (`/admin`). Đã triển khai module **Lễ tân** và **Phục vụ/Order**. Phục vụ có tiếp nhận bàn, gọi món, gửi bếp, theo dõi và xác nhận phục vụ, yêu cầu thanh toán, kết thúc và dọn bàn, thông báo, lịch sử. Bếp, Thu ngân và Admin chưa có giao diện. Toàn bộ nghiệp vụ sử dụng chung dữ liệu mô phỏng lưu cục bộ; không cần `.env`, API hay cơ sở dữ liệu.
 
 Đăng nhập demo: tài khoản **`receptionist`**, mật khẩu **`123456`**. Xem [hướng dẫn dùng thử, chính sách và kiểm thử](docs/reception-demo.md).
+
+Tài khoản phục vụ: **`waiter`**, mật khẩu **`123456`**. Xem [hướng dẫn module Order / Waiter](docs/waiter-implementation.md). Trong bản development, mở **Cá nhân → Công cụ kiểm thử luồng mô phỏng** để phát sự kiện bếp và thu ngân; công cụ bị khóa trong bản production.
 
 ## 1. Chuẩn bị môi trường
 

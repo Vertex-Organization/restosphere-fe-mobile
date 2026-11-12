@@ -1,4 +1,5 @@
 import { isReceptionist } from "../auth/roles";
+import { syncHandovers } from "../waiter/handover";
 import { STATUS_LABELS } from "./labels";
 import {
   canAssignTable,
@@ -243,6 +244,7 @@ export function executeCommand(
         text: "Đã bàn giao khách cho phục vụ. Lễ tân chỉ được xem.",
       });
       notify("Đã bàn giao cho phục vụ", r);
+      syncHandovers(state);
       break;
   }
   return { state, reservationId: r.id };

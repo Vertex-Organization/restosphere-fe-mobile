@@ -17,17 +17,17 @@ export default function DashboardScreen() {
   const summary = getReceptionDashboardSummary(state, now);
   const today = selectReservations(state, dayKey(now));
   const sections = [
-    { title: "Cần xác nhận", data: today.filter((r) => r.status === "PENDING") },
     { title: "Chờ bàn giao", data: today.filter((r) => r.status === "ARRIVED") },
+    { title: "Cần xác nhận", data: today.filter((r) => r.status === "PENDING") },
     { title: "Khách sắp đến", data: today.filter((r) => r.status === "CONFIRMED" && new Date(r.startsAt) >= now && new Date(r.startsAt).getTime() <= now.getTime() + 120 * 60_000) },
     { title: "Khách đến trễ", data: today.filter((r) => r.status === "CONFIRMED" && new Date(r.startsAt) < now) },
   ].filter((section) => section.data.length > 0);
   const candidate = confirm && (confirm.tableId ?? getAvailableTables(state, confirm, confirm.id, now)[0]?.id);
   const metrics = [
-    { value: summary.pending, label: "Chờ xác nhận", color: colors.warning },
-    { value: summary.upcoming, label: "Sắp đến", color: colors.info },
-    { value: summary.arrived, label: "Đã check-in", color: colors.success },
-    { value: summary.late, label: "Đến trễ", color: colors.danger },
+    { value: summary.pending, label: "Cần xác nhận", color: colors.warning, icon: "time-outline" as const },
+    { value: summary.upcoming, label: "Sắp đến", color: colors.info, icon: "calendar-outline" as const },
+    { value: summary.arrived, label: "Chờ bàn giao", color: colors.success, icon: "people-outline" as const },
+    { value: summary.late, label: "Đến trễ", color: colors.danger, icon: "alert-circle-outline" as const },
   ];
   const quickActions: { title: string; subtitle: string; icon: IconName; onPress(): void }[] = [
     { title: "Tạo đặt bàn", subtitle: "Thêm lịch hẹn mới", icon: "add-outline", onPress: () => router.push("/reception/reservations/form") },
@@ -44,46 +44,39 @@ export default function DashboardScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={ui.content}
         ListHeaderComponent={
-          <View style={{ gap: 24 }}>
+          <View style={{ gap: 16 }}>
             <View style={styles.dateRow}>
               <Text style={ui.muted}>Hôm nay, {now.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}</Text>
-              <Text style={ui.caption}>{state.session?.name.split(" ").slice(-2).join(" ")}</Text>
+              <Text style={[ui.caption, { color: colors.primary }]}>Quầy lễ tân</Text>
             </View>
             <View style={styles.summary}>
-              <View style={styles.summaryTop}>
-                <Text style={[ui.label, { color: colors.inverseMuted }]}>Hoạt động hôm nay</Text>
-                <AppIcon name="calendar-outline" size={19} color={colors.brandGold} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={ui.heading}>Tình hình ca làm</Text>
+                <Text style={ui.caption}>{summary.total} lịch đặt hôm nay · {state.tables.length} bàn</Text>
               </View>
-              <View style={styles.bigMetrics}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.bigNumber}>{summary.total.toString().padStart(2, "0")}</Text>
-                  <Text style={[ui.label, { color: colors.inverseMuted }]}>Lịch đặt bàn</Text>
-                </View>
-                <View style={styles.summaryDivider} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.bigNumber}>{summary.available.toString().padStart(2, "0")}<Text style={styles.totalTables}> / {state.tables.length}</Text></Text>
-                  <Text style={[ui.label, { color: colors.inverseMuted }]}>Bàn sẵn sàng</Text>
-                </View>
-              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Xem ${summary.available} bàn sẵn sàng`} onPress={() => router.push("/reception/tables?status=AVAILABLE")}
+                style={({ pressed }) => [styles.availability, { opacity: pressed ? 0.65 : 1 }]}>
+                <Text style={[styles.smallNumber, { color: colors.primary }]}>{summary.available}<Text style={ui.caption}> / {state.tables.length}</Text></Text>
+                <Text style={[ui.caption, { color: colors.primary }]}>Bàn sẵn sàng →</Text>
+              </Pressable>
             </View>
             <View style={styles.metricRow}>
               {metrics.map((metric) => (
                 <View key={metric.label} style={styles.smallMetric}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={[styles.statusDot, { backgroundColor: metric.color }]} />
-                    <Text style={styles.smallNumber}>{metric.value}</Text>
+                    <AppIcon name={metric.icon} size={16} color={metric.color} />
+                    <Text style={[styles.smallNumber, { color: metric.color }]}>{metric.value}</Text>
                   </View>
                   <Text style={[ui.caption, { textAlign: "center" }]}>{metric.label}</Text>
                 </View>
               ))}
             </View>
-            <View style={{ gap: 12 }}>
-              <Text style={ui.heading}>Thao tác nhanh</Text>
+            <View style={{ gap: 8 }}>
               <View style={styles.actionGrid}>
                 {quickActions.map((action, index) => (
                   <Pressable key={action.title} accessibilityRole="button" accessibilityLabel={`${action.title}. ${action.subtitle}`} onPress={action.onPress}
                     style={({ pressed }) => [styles.action, { backgroundColor: index === 0 ? pressed ? colors.primaryPressed : colors.primary : pressed ? colors.surface : colors.white }]}>
-                    <AppIcon name={action.icon} size={23} color={index === 0 ? colors.white : colors.primary} />
+                    <AppIcon name={action.icon} size={20} color={index === 0 ? colors.white : colors.primary} />
                     <Text style={[ui.label, { color: index === 0 ? colors.white : colors.ink, fontWeight: "600", flex: 1 }]}>{action.title}</Text>
                   </Pressable>
                 ))}
@@ -120,18 +113,13 @@ export default function DashboardScreen() {
 }
 const styles = StyleSheet.create({
   dateRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  summary: { padding: 24, gap: 20, backgroundColor: colors.primaryDark, borderRadius: radius.panel, borderCurve: "continuous" },
-  summaryTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  bigMetrics: { flexDirection: "row", alignItems: "center", gap: 24 },
-  bigNumber: { ...typography.metric, color: colors.white, fontVariant: ["tabular-nums"] },
-  totalTables: { ...typography.body, color: colors.inverseMuted },
-  summaryDivider: { width: 1, height: 52, backgroundColor: colors.inverseBorder },
-  metricRow: { flexDirection: "row", flexWrap: "wrap", rowGap: 16 },
+  summary: { flexDirection: "row", alignItems: "center", paddingBottom: 16, gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  availability: { minHeight: 48, alignItems: "flex-end", justifyContent: "center", gap: 2 },
+  metricRow: { flexDirection: "row", flexWrap: "wrap", rowGap: 12, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   smallMetric: { flex: 1, minWidth: 65, alignItems: "center", gap: 4 },
   smallNumber: { ...typography.heading, fontVariant: ["tabular-nums"], color: colors.ink },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  action: { flexBasis: "45%", flexGrow: 1, flexDirection: "row", alignItems: "center", padding: 14, gap: 10, borderRadius: radius.control, borderCurve: "continuous", minHeight: 64 },
-  queueHeading: { paddingTop: 16, paddingBottom: 0, flexDirection: "row", gap: 8, alignItems: "center" },
+  actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  action: { flexBasis: "45%", flexGrow: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8, borderRadius: radius.control, borderCurve: "continuous", minHeight: 48 },
+  queueHeading: { paddingTop: 8, paddingBottom: 0, flexDirection: "row", gap: 8, alignItems: "center" },
   count: { minWidth: 24, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.badge, backgroundColor: colors.primarySoft, alignItems: "center" },
 });

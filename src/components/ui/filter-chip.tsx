@@ -11,9 +11,10 @@ export function FilterChip({
       accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: 44, paddingHorizontal: 16, paddingVertical: 11,
-        justifyContent: "center", borderRadius: radius.full,
-        backgroundColor: selected ? colors.primaryDark : pressed ? colors.surface : colors.white,
+        minHeight: 44, paddingHorizontal: 14, paddingVertical: 10,
+        justifyContent: "center", borderRadius: radius.control,
+        borderWidth: 1, borderColor: selected ? colors.primary : colors.border,
+        backgroundColor: selected ? colors.primary : pressed ? colors.surface : colors.white,
       })}
     >
       <Text style={[ui.label, { color: selected ? colors.white : colors.muted }]}>{title}</Text>

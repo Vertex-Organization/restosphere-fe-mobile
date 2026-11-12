@@ -1,0 +1,33 @@
+import { useState } from "react";
+import { Text, View } from "react-native";
+import { Screen } from "@/components/layout/screen";
+import { Button, ConfirmDialog, EmptyState, Message, ui } from "@/components/ui";
+import { useApp } from "@/store/app-store";
+import { PAYMENT_LABELS } from "@/features/orders/labels";
+import { canOrder, paymentBlockReason, sessionBill, sessionDrafts, sessionItems, sessionTotal } from "@/features/waiter/selectors";
+import { AmountRow, ItemRow, MissingSession, SessionHeading, StatusTag, openServiceScreen, useServiceSession, useWaiterAction } from "@/features/waiter/components/service-ui";
+import { dateTimeLabel } from "@/utils/dates";
+
+export default function PaymentScreen() {
+  const { state } = useApp();
+  const session = useServiceSession();
+  const { act, error } = useWaiterAction();
+  const [confirm, setConfirm] = useState(false);
+  if (!session) return <MissingSession />;
+  if (!session.acceptedAt) return <Screen><SessionHeading session={session} /><Message kind="info">Cần tiếp nhận phục vụ trước khi xem yêu cầu thanh toán.</Message></Screen>;
+  const bill = sessionBill(state, session.id)!;
+  const reason = paymentBlockReason(state, session);
+  const items = sessionItems(state, session.id);
+  return <Screen><SessionHeading session={session} />
+    <StatusTag label={PAYMENT_LABELS[bill.status]} tone={bill.status === "PAID" ? "success" : "warning"} />
+    {!!error && <Message>{error}</Message>}
+    {items.map((i) => <ItemRow key={i.id} item={i} />)}
+    {!items.length && <EmptyState title="Chưa có món để thanh toán" description="Gọi món và hoàn tất phục vụ trước khi gửi yêu cầu." />}
+    <View style={ui.panel}><AmountRow label="Tổng tạm tính" amount={sessionTotal(state, session.id)} /><Text style={ui.caption}>Món hủy không tính tiền. Thu ngân xử lý hóa đơn và xác nhận thanh toán.</Text></View>
+    {bill.status === "UNPAID" && <>{!!reason && <Message kind="info">{reason}</Message>}<Button title="Gửi yêu cầu thanh toán" disabled={!!reason} onPress={() => setConfirm(true)} /></>}
+    {bill.status === "UNPAID" && canOrder(state, session) && !!reason && <Button title={sessionDrafts(state, session.id).length ? "Xử lý giỏ chưa gửi" : "Xem tiến độ và phục vụ món"} variant="secondary" onPress={() => openServiceScreen(sessionDrafts(state, session.id).length ? "cart" : "progress", session)} />}
+    {bill.status === "PAYMENT_REQUESTED" && <Message kind="info">Đã gửi lúc {dateTimeLabel(bill.requestedAt!)}. Đang chờ thu ngân xử lý; bàn đã khóa gọi thêm món.</Message>}
+    {bill.status === "PAID" && <><Message kind="success">Thu ngân đã xác nhận lúc {dateTimeLabel(bill.paidAt!)}. {session.guestLeftAt ? "Đã ghi nhận khách rời bàn." : "Bàn vẫn có khách cho đến khi bạn xác nhận khách đã rời."}</Message><Button title="Mở kết thúc phục vụ" onPress={() => openServiceScreen("finish", session)} /></>}
+    {confirm && <ConfirmDialog title="Yêu cầu thanh toán" message={`Gửi tổng tạm tính cho bàn ${session.tableId} đến thu ngân? Thao tác gọi thêm món sẽ bị khóa.`} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); act({ type: "request-payment", sessionId: session.id }); }} />}
+  </Screen>;
+}

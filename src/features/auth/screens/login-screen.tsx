@@ -31,9 +31,9 @@ export default function LoginScreen() {
           <BrandLogo width={260} />
         </View>
         <View style={styles.intro}>
-          <View style={styles.role}><View style={styles.dot} /><Text style={[ui.label, { color: colors.primary }]}>Không gian lễ tân</Text></View>
+          <View style={styles.role}><View style={styles.dot} /><Text style={[ui.label, { color: colors.primary }]}>RestoSphere Staff</Text></View>
           <Text accessibilityRole="header" style={styles.title}>Sẵn sàng cho{"\n"}một ca làm việc.</Text>
-          <Text style={[ui.text, { color: colors.muted }]}>Quản lý lịch đặt, đón khách và sắp xếp bàn{"\n"}trong cùng một nơi.</Text>
+          <Text style={[ui.text, { color: colors.muted }]}>Đón khách, gọi món và theo dõi phục vụ theo vai trò của bạn.</Text>
         </View>
         <View style={[ui.panel, styles.form]}>
           <View style={{ gap: 4 }}>
@@ -56,7 +56,9 @@ export default function LoginScreen() {
             <Text style={ui.label}>Trải nghiệm bản mô phỏng</Text>
           </View>
           <Text style={ui.muted}>Tài khoản receptionist · Mật khẩu 123456</Text>
-          <Button title="Điền tài khoản demo" variant="secondary" onPress={() => { setUsername("receptionist"); setPassword("123456"); setError(""); }} />
+          <Button title="Điền tài khoản lễ tân" variant="secondary" onPress={() => { setUsername("receptionist"); setPassword("123456"); setError(""); }} />
+          <Text style={ui.muted}>Tài khoản waiter · Mật khẩu 123456</Text>
+          <Button title="Điền tài khoản phục vụ" variant="secondary" onPress={() => { setUsername("waiter"); setPassword("123456"); setError(""); }} />
           <Text style={ui.caption}>Dữ liệu lưu trên thiết bị, chưa kết nối hệ thống thật.</Text>
         </View>
       </View>

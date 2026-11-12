@@ -64,10 +64,28 @@ yarn-error.*
 Thumbs.db
 Desktop.ini
 
+# Agent skills are installed locally per machine; never commit them
+/skills/
+/skills-lock.json
+/.skill-lock.json
+/.cursor/
+/.windsurf/
+/.gemini/
+/.opencode/
+/.github/skills/
+
 # Temporary files
+*.orig
 *.orig.*
+*.tmp
+*.temp
+*.bak
 /tmp/
 /temp/
+/.tmp/
 
 # Local design review reports, browser profiles and preview builds
 /.taste-skill/
+# taste-skill shoot.mjs writes section tiles + sections.json into tiles/ next to its output
+docs/**/tiles/
+/shots/

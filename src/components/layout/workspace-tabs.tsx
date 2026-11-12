@@ -17,6 +17,7 @@ import { WorkspaceHeader } from "./workspace-header";
 export interface WorkspaceTab {
   name: string;
   title: string;
+  tabLabel?: string;
   icon: IconName;
   activeIcon: IconName;
 }
@@ -80,6 +81,7 @@ export function WorkspaceTabs({
           name={tab.name}
           options={{
             title: tab.title,
+            tabBarLabel: tab.tabLabel ?? tab.title,
             tabBarIcon: ({ color, focused }) => {
               const icon = (
                 <AppIcon name={focused ? tab.activeIcon : tab.icon} size={21} color={color} />
