@@ -1,8 +1,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { createMockState, restoreDemoState } = require("../.cache/tests/mocks/demo-data.js");
-const { DEMO_WAITER, isValidServiceData } = require("../.cache/tests/mocks/waiter-data.js");
-const { sessionItems } = require("../.cache/tests/features/waiter/selectors.js");
+const { createMockState, restoreDemoState } = require("../.cache/tests/tests/fixtures/demo-data.js");
+const { DEMO_WAITER, isValidServiceData } = require("../.cache/tests/tests/fixtures/waiter-data.js");
+const { sessionItems } = require("../.cache/tests/src/features/waiter/selectors.js");
 
 test("service demo fixtures respect table capacity and chronological transitions", () => {
   const state = createMockState(new Date("2026-11-11T12:00:00+07:00"));

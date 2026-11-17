@@ -64,7 +64,7 @@ export default function TableDetailScreen() {
             <ReservationListItem key={r.id} reservation={r} trailing={
               <View style={{ gap: 4 }}>
                 <Text style={ui.caption}>{r.status === "SEATED" ? "Sử dụng bàn" : "Giữ chỗ"}: {dateTimeLabel(heldRange(r).startsAt)} – {dateTimeLabel(endsAt(heldRange(r)))}</Text>
-                <Text style={ui.caption}>Thêm 15 phút đệm giữa các lượt.</Text>
+                <Text style={ui.caption}>Thêm {state.settings.bufferMinutes} phút đệm giữa các lượt.</Text>
               </View>
             } />
           ))

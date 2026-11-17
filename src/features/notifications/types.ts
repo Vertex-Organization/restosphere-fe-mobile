@@ -1,5 +1,7 @@
+export type ReceptionNotificationKind = "TABLE_READY" | "TABLE_REASSIGNED" | "NEW_WEB_RESERVATION" | "REQUEST_DECIDED";
 export interface ReceptionNotification {
   id: string;
+  kind?: ReceptionNotificationKind;
   title: string;
   body: string;
   at: string;

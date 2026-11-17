@@ -10,6 +10,8 @@ export interface Staff {
   username: string;
   role: Role;
   shift: string;
+  areaId?: string;
+  shiftId?: string;
 }
 export interface AuthenticationRepository {
   signIn(username: string, password: string): Promise<Staff>;

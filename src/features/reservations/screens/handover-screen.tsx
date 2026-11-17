@@ -73,9 +73,9 @@ export default function HandoverScreen() {
           title="Bàn giao cho phục vụ"
           message={`${r.actualGuests} khách nhận bàn ${r.tableId}. Sau bàn giao, lễ tân chỉ được xem lượt phục vụ.`}
           onCancel={() => setConfirm(false)}
-          onConfirm={() => {
+          onConfirm={async () => {
             try {
-              run({ type: "handover", id: r.id });
+              await run({ type: "handover", id: r.id });
               router.replace(`/reception/reservations/${r.id}`);
             } catch (e) {
               setError((e as Error).message);

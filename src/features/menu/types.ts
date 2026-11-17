@@ -6,4 +6,5 @@ export interface MenuItem {
   categoryId: string;
   status: "AVAILABLE" | "SOLD_OUT" | "DISCONTINUED";
   notes: string;
+  imageUrl?: string | null;
 }

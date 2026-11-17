@@ -12,8 +12,15 @@ import { openTable, useWaiterAction } from "../components/service-ui";
 const notificationKinds: Record<WaiterNotification["kind"], { category: string; icon: IconName; tone: "primary" | "success" | "danger" | "warning" }> = {
   HANDOVER: { category: "Tiếp nhận bàn", icon: "swap-horizontal-outline", tone: "warning" },
   READY: { category: "Món sẵn sàng", icon: "restaurant-outline", tone: "success" },
-  REJECTED: { category: "Món cần xử lý", icon: "alert-circle-outline", tone: "danger" },
+  TABLE_REASSIGNED: { category: "Đổi bàn", icon: "swap-horizontal-outline", tone: "warning" },
+  MENU_AVAILABILITY: { category: "Tình trạng món", icon: "fast-food-outline", tone: "warning" },
+  ITEM_REJECTED: { category: "Món cần xử lý", icon: "alert-circle-outline", tone: "danger" },
   PAYMENT: { category: "Thanh toán", icon: "receipt-outline", tone: "primary" },
+  PAYMENT_RETURNED: { category: "Trả lại yêu cầu", icon: "arrow-undo-outline", tone: "warning" },
+  PAYMENT_VOIDED: { category: "Hủy thanh toán", icon: "close-circle-outline", tone: "danger" },
+  BILL_UPDATED: { category: "Cập nhật hóa đơn", icon: "refresh-outline", tone: "primary" },
+  REQUEST_DECIDED: { category: "Kết quả yêu cầu", icon: "checkmark-circle-outline", tone: "primary" },
+  INCIDENT: { category: "Sự cố", icon: "warning-outline", tone: "danger" },
   TABLE: { category: "Tình trạng bàn", icon: "grid-outline", tone: "primary" },
 };
 
@@ -30,9 +37,10 @@ export default function WaiterNotificationsScreen() {
       {!!error && <View style={{ paddingBottom: 12 }}><Message>{error}</Message></View>}</View>}
     renderItem={({ item: n }) => <NotificationRow title={n.title} body={n.body} at={n.at} unread={!n.readBy.includes(state.session!.id)} {...notificationKinds[n.kind]}
       onPress={() => act({ type: "read-notification", id: n.id }, () => {
-        const s = state.tableSessions.find((s) => s.id === n.sessionId)!;
-        if (n.kind === "PAYMENT") router.push({ pathname: "/waiter/payment", params: { sessionId: s.id } });
-        else if (n.kind === "READY" || n.kind === "REJECTED") router.push({ pathname: "/waiter/progress", params: { sessionId: s.id } });
+        const s = state.tableSessions.find((s) => s.id === n.sessionId);
+        if (!s) return;
+        if (["PAYMENT", "PAYMENT_RETURNED", "PAYMENT_VOIDED", "BILL_UPDATED"].includes(n.kind)) router.push({ pathname: "/waiter/payment", params: { sessionId: s.id } });
+        else if (n.kind === "READY" || n.kind === "ITEM_REJECTED") router.push({ pathname: "/waiter/progress", params: { sessionId: s.id } });
         else openTable(s);
       })} />}
     ListEmptyComponent={<EmptyState title={onlyUnread ? "Đã đọc hết thông báo" : "Chưa có thông báo"}

@@ -30,7 +30,7 @@ export default function ReservationFormScreen() {
   const r = state.reservations.find((item) => item.id === id);
   if (
     id &&
-    (!r || !getReservationActions(r, now, state.session!.role).includes("edit"))
+    (!r || !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes("edit"))
   )
     return (
       <Screen>
@@ -77,6 +77,9 @@ function ReservationForm({
     tableId: tableId || undefined,
     notes,
     specialRequests,
+    email: r?.email,
+    occasion: r?.occasion,
+    preorder: r?.preorder,
   };
   const available = getAvailableTables(state, input, r?.id, now).filter(
     (t) => !walkIn || t.status === "AVAILABLE",
@@ -86,7 +89,7 @@ function ReservationForm({
     ? isTableAvailableForTimeRange(state, selected, input, r?.id, now)
     : undefined;
   const invalidSelected = !!tableId && !available.some((t) => t.id === tableId);
-  function save() {
+  async function save() {
     const actualInput = {
       ...input,
       startsAt: walkIn ? new Date().toISOString() : input.startsAt,
@@ -99,14 +102,16 @@ function ReservationForm({
     );
     setErrors(validation);
     setError("");
+    if (!name.trim() || !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s()-]/g, "")) || !areaId)
+      return setError("Nhập tên khách, số điện thoại hợp lệ và chọn khu vực.");
     if (Object.keys(validation).length)
       return setError("Kiểm tra các trường được đánh dấu bên dưới.");
     try {
       const id = r
-        ? run({ type: "edit", id: r.id, input: actualInput })
-        : run({ type: "create", input: actualInput, walkIn });
+        ? (await run({ type: "edit", id: r.id, input: actualInput }), r.id)
+        : await run({ type: "create", input: actualInput, walkIn });
       if (id)
-        router.replace(walkIn ? `/reception/handover?id=${id}` : `/reception/reservations/${id}`);
+        router.replace(`/reception/reservations/${id}`);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -131,20 +136,20 @@ function ReservationForm({
       </Text>
       <Text style={ui.muted}>
         {walkIn
-          ? "Chọn bàn sẵn sàng, ghi nhận khách đã đến rồi tiếp tục bàn giao."
+            ? "Chọn bàn sẵn sàng, tạo lịch rồi xác nhận và check-in trước khi bàn giao."
           : "Lưu lịch chưa đồng nghĩa đã xác nhận. Lịch chờ chưa giữ bàn."}
       </Text>
       {!!error && <Message>{error}</Message>}
       <Section title="Thông tin khách">
         <Field
-          label={walkIn ? "Tên khách (không bắt buộc)" : "Tên khách *"}
+          label="Tên khách *"
           value={name}
           onChangeText={setName}
           error={errors.name}
           autoCapitalize="words"
         />
         <Field
-          label="Số điện thoại (không bắt buộc)"
+          label="Số điện thoại *"
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
@@ -173,14 +178,14 @@ function ReservationForm({
         error={errors.duration}
       />
       <Select
-        label="Khu vực mong muốn"
+        label="Khu vực *"
         value={areaId}
         onChange={(value) => {
           setArea(value);
           setTable("");
         }}
         options={[
-          { value: "", label: "Không yêu cầu khu vực" },
+          { value: "", label: "Chọn khu vực" },
           ...state.areas.map((a) => ({ value: a.id, label: a.name })),
         ]}
       />

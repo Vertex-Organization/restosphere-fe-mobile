@@ -1,15 +1,15 @@
-import type { Staff } from "../features/auth/types";
-import type { ReceptionState } from "../features/reservations/types";
-import type { ServiceData } from "../features/waiter/types";
-import { syncHandovers } from "../features/waiter/handover";
-import { addMinutes } from "../utils/dates";
+import type { Staff } from "../../src/features/auth/types";
+import type { ReceptionState } from "../../src/features/reservations/types";
+import type { ServiceData } from "../../src/features/waiter/types";
+import { syncHandovers } from "./handover";
+import { addMinutes } from "../../src/utils/dates";
 
-export const DEMO_WAITER: Staff = { id: "NV002", name: "Trần Hoài Nam", username: "waiter", role: "WAITER", shift: "Ca phục vụ demo" };
-export const OTHER_WAITER: Staff = { id: "NV003", name: "Lê Thu Hà", username: "waiter2", role: "WAITER", shift: "Ca phục vụ demo" };
+export const DEMO_WAITER: Staff = { id: "NV002", name: "Trần Hoài Nam", username: "waiter", role: "WAITER", shift: "Ca sáng 08:00–16:00 · Khu: Tầng 1", areaId: "floor-1", shiftId: "SH-AM" };
+export const OTHER_WAITER: Staff = { id: "NV003", name: "Lê Thu Hà", username: "waiter2", role: "WAITER", shift: "Ca sáng 08:00–16:00 · Khu: Tầng 2", areaId: "floor-2", shiftId: "SH-AM" };
 export function emptyServiceData(receptionist: Staff): ServiceData {
   return {
     serviceVersion: 1, employees: [{ ...receptionist }, { ...DEMO_WAITER }, { ...OTHER_WAITER }],
-    tableSessions: [], orders: [], orderItems: [], drafts: [], bills: [], waiterNotifications: [],
+    tableSessions: [], orders: [], orderItems: [], drafts: [], bills: [], waiterNotifications: [], requests: [], outbox: [],
     menuCategories: [ { id: "seafood", name: "Hải sản" }, { id: "rice", name: "Cơm & mì" }, { id: "hotpot", name: "Lẩu" }, { id: "main", name: "Món khác" }, { id: "drink", name: "Đồ uống" } ],
     menuItems: [
       { id: "grilled-shrimp", name: "Tôm nướng", price: 219000, categoryId: "seafood", status: "AVAILABLE", notes: "Tôm nguyên con nướng. Ghi chú độ cay khi gọi món." },
@@ -87,15 +87,17 @@ export function seedWaiterScenarios(state: ReceptionState, now: Date) {
 
 export function isValidServiceData(state: ReceptionState): boolean {
   const date = (v: unknown) => typeof v === "string" && Number.isFinite(new Date(v).getTime());
-  if (state.serviceVersion !== 1 || ![state.employees, state.tableSessions, state.menuCategories, state.menuItems, state.orders, state.orderItems, state.drafts, state.bills, state.waiterNotifications].every(Array.isArray)) return false;
+  if (state.serviceVersion !== 1 || ![state.employees, state.tableSessions, state.menuCategories, state.menuItems, state.orders, state.orderItems, state.drafts, state.bills, state.waiterNotifications, state.requests, state.outbox].every(Array.isArray)) return false;
   return state.employees.every((e) => e && typeof e.id === "string" && typeof e.name === "string") &&
     state.menuCategories.every((c) => c && typeof c.id === "string" && typeof c.name === "string") &&
     state.menuItems.every((m) => m && typeof m.id === "string" && typeof m.name === "string" && typeof m.notes === "string" && Number.isFinite(m.price) && m.price >= 0 && ["AVAILABLE", "SOLD_OUT", "DISCONTINUED"].includes(m.status) && state.menuCategories.some((c) => c.id === m.categoryId)) &&
     state.tableSessions.every((s) => s && typeof s.id === "string" && date(s.handedOverAt) && (!s.acceptedAt || date(s.acceptedAt)) && (!s.guestLeftAt || date(s.guestLeftAt)) && (!s.closedAt || date(s.closedAt)) && state.tables.some((t) => t.id === s.tableId) && state.reservations.some((r) => r.id === s.reservationId)) &&
-    state.orders.every((o) => o && typeof o.id === "string" && date(o.submittedAt) && Number.isInteger(o.sequence) && state.tableSessions.some((s) => s.id === o.sessionId)) &&
-    state.orderItems.every((i) => i && typeof i.id === "string" && typeof i.name === "string" && typeof i.note === "string" && date(i.submittedAt) && Number.isFinite(i.unitPrice) && i.unitPrice >= 0 && Number.isInteger(i.quantity) && i.quantity > 0 && i.quantity <= 99 && ["SUBMITTED", "PREPARING", "READY", "SERVED", "CANCELLED"].includes(i.status) && state.orders.some((o) => o.id === i.orderId)) &&
+    state.orders.every((o) => o && typeof o.id === "string" && date(o.submittedAt) && Number.isInteger(o.sequence) && (!o.priority || (typeof o.priority.by === "string" && typeof o.priority.reason === "string" && date(o.priority.at))) && state.tableSessions.some((s) => s.id === o.sessionId)) &&
+    state.orderItems.every((i) => i && typeof i.id === "string" && typeof i.name === "string" && typeof i.note === "string" && date(i.submittedAt) && Number.isFinite(i.unitPrice) && i.unitPrice >= 0 && Number.isInteger(i.quantity) && i.quantity > 0 && i.quantity <= 99 && ["SUBMITTED", "PREPARING", "READY", "SERVED", "REJECTED", "CANCELLED", "VOIDED"].includes(i.status) && (i.status !== "REJECTED" || (typeof i.rejectionReason === "string" && i.rejectionReason.trim().length >= 5)) && state.orders.some((o) => o.id === i.orderId)) &&
     state.drafts.every((d) => d && typeof d.id === "string" && typeof d.waiterId === "string" && typeof d.note === "string" && Number.isInteger(d.quantity) && d.quantity > 0 && d.quantity <= 99 && state.tableSessions.some((s) => s.id === d.sessionId) && state.menuItems.some((m) => m.id === d.menuItemId)) &&
     state.bills.every((b) => b && typeof b.id === "string" && ["UNPAID", "PAYMENT_REQUESTED", "PAID"].includes(b.status) && state.tableSessions.some((s) => s.id === b.sessionId) && (b.amount === undefined || (Number.isFinite(b.amount) && b.amount >= 0))) &&
     state.tableSessions.every((s) => state.bills.filter((b) => b.sessionId === s.id).length === 1) &&
-    state.waiterNotifications.every((n) => n && typeof n.id === "string" && typeof n.title === "string" && typeof n.body === "string" && ["HANDOVER", "READY", "REJECTED", "PAYMENT", "TABLE"].includes(n.kind) && date(n.at) && Array.isArray(n.readBy) && n.readBy.every((id) => typeof id === "string") && state.tableSessions.some((s) => s.id === n.sessionId));
+    state.requests.every((r) => r && typeof r.id === "string" && typeof r.code === "string" && r.type === "CANCEL_ITEM" && r.targetType === "ORDER_ITEM" && r.targetId === r.itemId && ["PENDING", "APPROVED", "REJECTED", "WITHDRAWN"].includes(r.status) && typeof r.reason === "string" && r.reason.trim().length >= 5 && r.reason.length <= 200 && typeof r.requestedBy === "string" && date(r.requestedAt) && Number.isSafeInteger(r.amount) && r.amount >= 0 && state.orders.some((o) => o.sessionId === r.sessionId && state.orderItems.some((i) => i.id === r.itemId && i.orderId === o.id)) && (r.status === "PENDING" || (typeof r.decidedBy === "string" && date(r.decidedAt) && typeof r.decisionNote === "string"))) &&
+    state.outbox.every((m) => m && typeof m.id === "string" && typeof m.title === "string" && typeof m.body === "string" && typeof m.targetId === "string" && date(m.at) && ((m.kind === "APPROVAL" && m.audience === "MANAGER") || ((m.kind === "CANCELLED" || m.kind === "PRIORITY") && m.audience === "KITCHEN") || ((m.kind === "PAYMENT_REQUEST" || m.kind === "PAYMENT_REQUEST_WITHDRAWN") && m.audience === "CASHIER"))) &&
+    state.waiterNotifications.every((n) => n && typeof n.id === "string" && typeof n.title === "string" && typeof n.body === "string" && ["HANDOVER", "READY", "TABLE_REASSIGNED", "MENU_AVAILABILITY", "ITEM_REJECTED", "PAYMENT", "PAYMENT_RETURNED", "PAYMENT_VOIDED", "BILL_UPDATED", "TABLE", "INCIDENT", "REQUEST_DECIDED"].includes(n.kind) && date(n.at) && Array.isArray(n.readBy) && n.readBy.every((id) => typeof id === "string") && (n.kind === "MENU_AVAILABILITY" ? n.sessionId === undefined : state.tableSessions.some((s) => s.id === n.sessionId)));
 }

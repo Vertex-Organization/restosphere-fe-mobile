@@ -6,4 +6,6 @@ export interface Bill {
   requestedAt?: string;
   paidAt?: string;
   amount?: number;
+  requestedAmount?: number;
+  currentAmount?: number;
 }

@@ -1,25 +1,36 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { AppIcon, Button, EmptyState, Message, ui, type IconName } from "@/components/ui";
+import { AppIcon, Button, EmptyState, Field, Message, ui, type IconName } from "@/components/ui";
 import { Screen } from "@/components/layout/screen";
 import { useApp } from "@/store/app-store";
 import { colors, radius } from "@/theme";
 import { timeLabel } from "@/utils/dates";
 import { ITEM_LABELS } from "@/features/orders/labels";
-import type { OrderItem } from "@/features/orders/types";
+import type { Order, OrderItem } from "@/features/orders/types";
 import { FoodThumbnail } from "@/features/menu/components/food-thumbnail";
-import { canViewSession, money, serviceLabel, sessionBill, sessionItems } from "../selectors";
+import { canOrder, canViewSession, money, serviceLabel, sessionBill, sessionItems } from "../selectors";
 import type { TableSession, WaiterCommand } from "../types";
 
 export function useWaiterAction() {
   const { runWaiter } = useApp();
   const [error, setError] = useState("");
-  function act(command: WaiterCommand, then?: () => void) {
-    try { runWaiter(command); setError(""); then?.(); }
+  async function act(command: WaiterCommand, then?: () => void) {
+    try { await runWaiter(command); setError(""); then?.(); }
     catch (e) { setError((e as Error).message); }
   }
   return { act, error, setError };
+}
+export function PriorityRequest({ session, order }: { session: TableSession; order: Order }) {
+  const { act, error } = useWaiterAction();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  if (order.priority) return <Text style={ui.caption}>Đã yêu cầu ưu tiên: {order.priority.reason}</Text>;
+  if (!open) return <Button title="Yêu cầu ưu tiên" variant="secondary" onPress={() => setOpen(true)} />;
+  return <View style={{ gap: 8 }}><Field label="Lý do ưu tiên" multiline maxLength={200} value={reason} onChangeText={setReason} />
+    {!!error && <Message>{error}</Message>}
+    <Button title="Gửi yêu cầu ưu tiên" onPress={() => act({ type: "request-priority", sessionId: session.id, orderId: order.id, reason }, () => { setOpen(false); setReason(""); })} />
+    <Button title="Quay lại" variant="secondary" onPress={() => setOpen(false)} /></View>;
 }
 export function useServiceSession() {
   const { id, sessionId } = useLocalSearchParams<{ id?: string; sessionId?: string }>();
@@ -56,7 +67,7 @@ export function SessionCard({ session }: { session: TableSession }) {
   const table = state.tables.find((t) => t.id === session.tableId)!;
   const r = state.reservations.find((r) => r.id === session.reservationId)!;
   const items = sessionItems(state, session.id);
-  const remaining = items.filter((i) => !["SERVED", "CANCELLED"].includes(i.status)).reduce((n, i) => n + i.quantity, 0);
+  const remaining = items.filter((i) => !["SERVED", "REJECTED", "CANCELLED", "VOIDED"].includes(i.status)).reduce((n, i) => n + i.quantity, 0);
   const ready = items.filter((i) => i.status === "READY").reduce((n, i) => n + i.quantity, 0);
   const bill = sessionBill(state, session.id);
   const tone = session.guestLeftAt || session.closedAt ? colors.muted : !session.acceptedAt || bill?.status === "PAYMENT_REQUESTED" ? colors.warning : ready || bill?.status === "PAID" ? colors.success : colors.primary;
@@ -75,6 +86,14 @@ export function SessionCard({ session }: { session: TableSession }) {
   </Pressable>;
 }
 export function ItemRow({ item, onServe }: { item: OrderItem; onServe?: () => void }) {
+  const { state } = useApp();
+  const { act, error } = useWaiterAction();
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState("");
+  const order = state.orders.find((o) => o.id === item.orderId);
+  const session = state.tableSessions.find((s) => s.id === order?.sessionId);
+  const request = state.requests.find((r) => r.itemId === item.id);
+  const canCancel = session && canOrder(state, session) && ["PREPARING", "READY"].includes(item.status) && request?.status !== "PENDING";
   const icon: IconName = item.status === "READY" ? "restaurant-outline" : item.status === "PREPARING" ? "flame-outline" : item.status === "SERVED" ? "checkmark-done-outline" : item.status === "CANCELLED" ? "close-circle-outline" : "send-outline";
   return <View style={{ gap: 9, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
     <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
@@ -86,6 +105,10 @@ export function ItemRow({ item, onServe }: { item: OrderItem; onServe?: () => vo
       </View>
     </View>
     {!!item.note && <Text style={ui.label}>Ghi chú: {item.note}</Text>}
+    {!!item.rejectionReason && <Message>{item.rejectionReason}</Message>}
+    {request && <Text style={ui.caption}>{request.code} · {request.status === "PENDING" ? "Chờ duyệt" : request.status === "APPROVED" ? "Đã duyệt" : "Từ chối"}{request.decisionNote ? ` · ${request.decisionNote}` : ""}</Text>}
+    {!!error && <Message>{error}</Message>}
+    {canCancel && (cancelling ? <View style={{ gap: 8 }}><Field label="Lý do hủy" multiline maxLength={200} value={reason} onChangeText={setReason} /><Button title="Gửi yêu cầu hủy" onPress={() => act({ type: "request-cancel", sessionId: session.id, itemId: item.id, reason }, () => { setCancelling(false); setReason(""); })} /><Button title="Quay lại" variant="secondary" onPress={() => setCancelling(false)} /></View> : <Button title="Yêu cầu hủy" variant="secondary" onPress={() => setCancelling(true)} />)}
     {!!item.cancellationReason && <Message>{item.cancellationReason}</Message>}
     <Text style={ui.caption}>Gửi {timeLabel(item.submittedAt)}{item.readyAt ? ` · Xong ${timeLabel(item.readyAt)}` : ""}{item.servedAt ? ` · Phục vụ ${timeLabel(item.servedAt)}` : ""}</Text>
     {item.status === "READY" && onServe && <Button title="Xác nhận đã phục vụ" icon="checkmark-outline" onPress={onServe} />}

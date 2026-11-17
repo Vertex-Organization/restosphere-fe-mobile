@@ -2,7 +2,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { BrandLogo } from "@/components/brand-logo";
 import { Screen } from "@/components/layout/screen";
-import { AppIcon, Button, Field, IconButton, Message, ui } from "@/components/ui";
+import { Button, Field, IconButton, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
 import { colors, radius } from "@/theme";
 
@@ -40,7 +40,7 @@ export default function LoginScreen() {
             <Text style={ui.heading}>Đăng nhập nhân viên</Text>
             <Text style={ui.muted}>Sử dụng tài khoản được cấp để tiếp tục.</Text>
           </View>
-          <Field label="Tài khoản" placeholder="Nhập tài khoản" icon="person-outline" value={username} onChangeText={setUsername}
+          <Field label="Email" placeholder="Nhập email được cấp" icon="person-outline" value={username} onChangeText={setUsername}
             autoCapitalize="none" autoCorrect={false} autoComplete="username"
             error={submitted && !username.trim() ? "Vui lòng nhập tài khoản." : undefined} />
           <Field label="Mật khẩu" placeholder="Nhập mật khẩu" icon="lock-closed-outline" value={password} onChangeText={setPassword}
@@ -49,17 +49,17 @@ export default function LoginScreen() {
             trailing={<IconButton icon={visible ? "eye-off-outline" : "eye-outline"} label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"} onPress={() => setVisible(!visible)} />} />
           {!!error && <Message>{error}</Message>}
           <Button title={busy ? "Đang đăng nhập…" : "Đăng nhập"} icon="arrow-forward-outline" disabled={busy} onPress={submit} />
-        </View>
-        <View style={styles.demo}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <AppIcon name="information-circle-outline" size={19} color={colors.muted} />
-            <Text style={ui.label}>Trải nghiệm bản mô phỏng</Text>
-          </View>
-          <Text style={ui.muted}>Tài khoản receptionist · Mật khẩu 123456</Text>
-          <Button title="Điền tài khoản lễ tân" variant="secondary" onPress={() => { setUsername("receptionist"); setPassword("123456"); setError(""); }} />
-          <Text style={ui.muted}>Tài khoản waiter · Mật khẩu 123456</Text>
-          <Button title="Điền tài khoản phục vụ" variant="secondary" onPress={() => { setUsername("waiter"); setPassword("123456"); setError(""); }} />
-          <Text style={ui.caption}>Dữ liệu lưu trên thiết bị, chưa kết nối hệ thống thật.</Text>
+          {__DEV__ && <View style={{ gap: 12 }}>
+            <Text style={ui.muted}>Tài khoản demo · Mật khẩu: 123456</Text>
+            {([['receptionist', 'Lễ tân'], ['waiter', 'Phục vụ']] as const).map(([name, label]) => (
+              <View key={name} style={{ gap: 4 }}>
+                <Button title={`Điền tài khoản ${label}`} disabled={busy} onPress={() => {
+                  setUsername(`${name}@restosphere.test`); setPassword("123456"); setError(""); setSubmitted(false);
+                }} />
+                <Text style={ui.muted}>{name}@restosphere.test</Text>
+              </View>
+            ))}
+          </View>}
         </View>
       </View>
     </Screen>
@@ -73,5 +73,4 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary },
   title: { fontSize: 34, lineHeight: 43, fontWeight: "600", letterSpacing: -1.2, color: colors.ink },
   form: { padding: 24, gap: 20 },
-  demo: { gap: 12, paddingHorizontal: 4 },
 });

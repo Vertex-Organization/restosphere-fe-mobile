@@ -1,6 +1,7 @@
 import { Pressable, Text, type StyleProp, type ViewStyle } from "react-native";
 import { colors, radius } from "@/theme";
 import { AppIcon, type IconName } from "./app-icon";
+import { useApp } from "@/store/app-store";
 
 export function Button({
   title,
@@ -23,12 +24,14 @@ export function Button({
   accessibilityLabel?: string;
   size?: "sm" | "md";
 }) {
+  const { busy } = useApp();
+  disabled = disabled || busy;
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, busy }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [{

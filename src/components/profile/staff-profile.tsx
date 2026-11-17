@@ -58,6 +58,6 @@ export function ProfileAction({ title, icon, onPress }: { title: string; icon: I
 export function DeviceDataNote() {
   return <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
     <AppIcon name="information-circle-outline" size={18} color={colors.muted} />
-    <Text style={[ui.caption, { flex: 1 }]}>Dữ liệu mô phỏng lưu trên thiết bị, chưa kết nối hệ thống thật. Dữ liệu được tạo lại khi mở ứng dụng vào ngày mới.</Text>
+    <Text style={[ui.caption, { flex: 1 }]}>Dữ liệu được lưu trên máy chủ và cập nhật mỗi 15 giây. Thao tác cần kết nối mạng.</Text>
   </View>;
 }

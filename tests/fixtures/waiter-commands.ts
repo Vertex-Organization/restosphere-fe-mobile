@@ -1,13 +1,13 @@
-import { requirePermission, type WaiterPermission } from "../auth/permissions";
-import type { ReceptionState } from "../reservations/types";
-import type { WaiterCommand } from "./types";
-import { canOrder, canViewNotification, paymentBlockReason, sessionBill, sessionItems, sessionTotal } from "./selectors";
+import { requirePermission, type WaiterPermission } from "../../src/features/auth/permissions";
+import type { ReceptionState } from "../../src/features/reservations/types";
+import type { WaiterCommand } from "../../src/features/waiter/types";
+import { canOrder, canViewNotification, paymentBlockReason, sessionBill, sessionItems, sessionTotal } from "../../src/features/waiter/selectors";
 
 const permissions: Record<WaiterCommand["type"], WaiterPermission> = {
   accept: "table.accept_handover", "add-draft": "order.create", "edit-draft": "order.create",
   "remove-draft": "order.create", submit: "order.submit", serve: "order.mark_served",
-  "request-payment": "payment.request", "guest-left": "table.mark_guest_left", clean: "table.mark_cleaned",
-  "read-notification": "table.read_assigned",
+  "request-payment": "payment.request", "withdraw-payment-request": "payment.request", "guest-left": "table.mark_guest_left", clean: "table.mark_cleaned",
+  "read-notification": "table.read_assigned", "request-cancel": "order.request_cancel", "request-priority": "order.request_priority",
 };
 export function executeWaiterCommand(current: ReceptionState, command: WaiterCommand, now = new Date()): ReceptionState {
   const permission = permissions[command.type];
@@ -40,6 +40,7 @@ export function executeWaiterCommand(current: ReceptionState, command: WaiterCom
     session.waiterId = staff.id;
     session.acceptedAt = at;
     reservation.history.push({ at, text: `${staff.name} tiếp nhận phục vụ.` });
+    state.drafts.filter((d) => d.sessionId === session.id && !d.waiterId).forEach((d) => { d.waiterId = staff.id; });
     notify("Đã tiếp nhận phục vụ");
     return state;
   }
@@ -89,6 +90,28 @@ export function executeWaiterCommand(current: ReceptionState, command: WaiterCom
       state.drafts = state.drafts.filter((d) => !sent.has(d.id));
       break;
     }
+    case "request-cancel": {
+      const item = sessionItems(state, session.id).find((i) => i.id === command.itemId);
+      const reason = command.reason.trim();
+      if (!canOrder(state, session) || !item || !["PREPARING", "READY"].includes(item.status)) throw new Error("Chỉ yêu cầu hủy món đang chế biến hoặc sẵn sàng.");
+      if (reason.length < 5 || reason.length > 200) throw new Error("Lý do cần từ 5 đến 200 ký tự.");
+      if (state.requests.some((r) => r.itemId === item.id && r.status === "PENDING")) throw new Error("Món đã có yêu cầu hủy đang chờ duyệt.");
+      const requestId = id("req");
+      state.requests.unshift({ id: requestId, code: requestId, type: "CANCEL_ITEM", status: "PENDING", targetType: "ORDER_ITEM", targetId: item.id, itemId: item.id, sessionId: session.id, amount: item.quantity * item.unitPrice, reason, requestedBy: staff.id, requestedAt: at });
+      state.outbox.unshift({ id: id("out"), kind: "APPROVAL", audience: "MANAGER", targetId: requestId, at, title: `Yêu cầu hủy ${item.name}`, body: reason });
+      break;
+    }
+    case "request-priority": {
+      const order = state.orders.find((o) => o.id === command.orderId && o.sessionId === session.id);
+      const reason = command.reason.trim();
+      if (!canOrder(state, session) || !order) throw new Error("Không tìm thấy lượt gọi món đang phục vụ.");
+      if (reason.length < 5 || reason.length > 200) throw new Error("Lý do cần từ 5 đến 200 ký tự.");
+      if (order.priority) throw new Error("Lượt gọi món này đã được yêu cầu ưu tiên.");
+      if (!state.orderItems.some((i) => i.orderId === order.id && ["SUBMITTED", "PREPARING"].includes(i.status))) throw new Error("Lượt gọi món không còn món chờ bếp.");
+      order.priority = { at, by: staff.id, reason };
+      state.outbox.unshift({ id: id("out"), kind: "PRIORITY", audience: "KITCHEN", targetId: order.id, at, title: `Ưu tiên Bàn ${table.code} · lượt ${order.sequence}`, body: reason });
+      break;
+    }
     case "serve": {
       if (session.guestLeftAt || table.status !== "OCCUPIED" || bill.status !== "UNPAID") throw new Error("Lượt phục vụ không còn nhận món.");
       const item = sessionItems(state, session.id).find((i) => i.id === command.itemId);
@@ -100,10 +123,22 @@ export function executeWaiterCommand(current: ReceptionState, command: WaiterCom
     case "request-payment": {
       const reason = paymentBlockReason(state, session);
       if (reason) throw new Error(reason);
+      const total = sessionTotal(state, session.id);
       bill.status = "PAYMENT_REQUESTED";
       bill.requestedAt = at;
-      bill.amount = sessionTotal(state, session.id);
-      notify("Đã gửi yêu cầu thanh toán");
+      bill.amount = total;
+      bill.requestedAmount = total;
+        bill.currentAmount = total;
+        state.outbox.unshift({ id: id("out"), kind: "PAYMENT_REQUEST", audience: "CASHIER", targetId: bill.id, at, title: `Bàn ${session.tableId} yêu cầu thanh toán`, body: `${total.toLocaleString("vi-VN")} ₫` });
+        notify("Đã gửi yêu cầu thanh toán");
+      break;
+    }
+    case "withdraw-payment-request": {
+      if (bill.status !== "PAYMENT_REQUESTED") throw new Error("Chỉ rút yêu cầu khi hóa đơn đang chờ thanh toán.");
+      bill.status = "UNPAID";
+        delete bill.requestedAt;
+        state.outbox.unshift({ id: id("out"), kind: "PAYMENT_REQUEST_WITHDRAWN", audience: "CASHIER", targetId: bill.id, at, title: `Bàn ${session.tableId} rút yêu cầu thanh toán`, body: "Phục vụ tiếp tục gọi món." });
+        notify("Đã rút lại yêu cầu thanh toán");
       break;
     }
     case "guest-left": {
@@ -119,7 +154,7 @@ export function executeWaiterCommand(current: ReceptionState, command: WaiterCom
       if (!session.guestLeftAt || bill.status !== "PAID" || table.status !== "CLEANING") throw new Error("Chỉ dọn xong khi khách đã rời và bàn đang dọn.");
       if (state.tableSessions.some((s) => s.id !== session.id && s.tableId === table.id && !s.closedAt)) throw new Error("Bàn còn lượt sử dụng khác chưa kết thúc.");
       if (state.reservations.some((r) => r.id !== reservation.id && r.tableId === table.id && ["ARRIVED", "SEATED"].includes(r.status))) throw new Error("Bàn còn khách hoặc lượt check-in khác.");
-      if (state.drafts.some((d) => d.sessionId === session.id) || sessionItems(state, session.id).some((i) => !["SERVED", "CANCELLED"].includes(i.status))) throw new Error("Lượt phục vụ còn món chưa xử lý.");
+      if (state.drafts.some((d) => d.sessionId === session.id) || sessionItems(state, session.id).some((i) => !["SERVED", "REJECTED", "CANCELLED", "VOIDED"].includes(i.status))) throw new Error("Lượt phục vụ còn món chưa xử lý.");
       session.closedAt = at;
       reservation.status = "COMPLETED";
       reservation.history.push({ at, text: `${staff.name} xác nhận khách rời và bàn đã dọn.` });
@@ -127,7 +162,7 @@ export function executeWaiterCommand(current: ReceptionState, command: WaiterCom
       table.status = "AVAILABLE";
       notify("Bàn đã dọn · sẵn sàng đón khách");
       // Also notify reception through its existing notification collection.
-      state.notifications.unshift({ id: id("n"), title: "Bàn đã sẵn sàng", body: `Bàn ${table.code} đã dọn xong.`, at, read: false, tableId: table.id, reservationId: reservation.id });
+      state.notifications.unshift({ id: id("n"), kind: "TABLE_READY", title: "Bàn đã sẵn sàng", body: `Bàn ${table.code} đã dọn xong.`, at, read: false, tableId: table.id, reservationId: reservation.id });
       break;
     }
     default: throw new Error("Thao tác không hợp lệ.");

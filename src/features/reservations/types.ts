@@ -16,6 +16,11 @@ export interface Customer {
   name: string;
   phone: string;
 }
+export interface PreorderItem {
+  menuItemId: string;
+  quantity: number;
+  note?: string;
+}
 export interface ReservationInput {
   customer: Customer;
   startsAt: string;
@@ -23,6 +28,9 @@ export interface ReservationInput {
   duration: number;
   areaId?: string;
   tableId?: string;
+  occasion?: string;
+  email?: string;
+  preorder?: PreorderItem[];
   notes: string;
   specialRequests: string;
 }
@@ -44,8 +52,13 @@ export interface TableAssignment {
   assignedAt: string;
   releasedAt?: string;
 }
+export interface ReservationSettings {
+  bufferMinutes: number;
+  noShowMinutes: number;
+}
 export interface ReceptionState extends ServiceData {
   version: 1;
+  settings: ReservationSettings;
   seedDay: string;
   session: Staff | null;
   areas: RestaurantArea[];
@@ -71,6 +84,7 @@ export type ReservationAction =
 export type ReceptionCommand =
   | { type: "create"; input: ReservationInput; walkIn?: boolean }
   | { type: "edit"; id: string; input: ReservationInput }
+  | { type: "request-exception"; id: string; reason: string }
   | {
       type: "confirm" | "reject" | "cancel" | "no-show";
       id: string;

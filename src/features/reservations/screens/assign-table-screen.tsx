@@ -22,7 +22,7 @@ export default function AssignTableScreen() {
   const r = state.reservations.find((item) => item.id === id);
   if (
     !r ||
-    !getReservationActions(r, now, state.session!.role).includes("assign")
+    !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes("assign")
   )
     return (
       <Screen>
@@ -93,9 +93,9 @@ export default function AssignTableScreen() {
           title={r.tableId ? "Xác nhận đổi bàn" : "Xác nhận gán bàn"}
           message={`Bàn cũ: ${r.tableId ?? "Chưa có"} → bàn mới: ${selected}. Kiểm tra lại xung đột trước khi lưu.`}
           onCancel={() => setConfirm(false)}
-          onConfirm={() => {
+          onConfirm={async () => {
             try {
-              run({ type: "assign", id: r.id, tableId: selected });
+              await run({ type: "assign", id: r.id, tableId: selected });
               if (r.status === "ARRIVED")
                 router.replace(`/reception/handover?id=${r.id}`);
               else if (router.canGoBack()) router.back();

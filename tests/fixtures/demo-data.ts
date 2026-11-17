@@ -1,21 +1,25 @@
-import type { Staff } from "../features/auth/types";
-import { STATUS_LABELS } from "../features/reservations/labels";
+import type { Staff } from "../../src/features/auth/types";
+import { STATUS_LABELS } from "../../src/features/reservations/labels";
+import { DEFAULT_SETTINGS } from "../../src/features/reservations/rules";
 import type {
   ReceptionState,
   Reservation,
+  ReservationSettings,
   ReservationStatus,
-} from "../features/reservations/types";
-import { TABLE_LABELS } from "../features/tables/labels";
-import { addMinutes, dayKey } from "../utils/dates";
+} from "../../src/features/reservations/types";
+import { TABLE_LABELS } from "../../src/features/tables/labels";
+import { addMinutes, dayKey } from "../../src/utils/dates";
 import { DEMO_WAITER, OTHER_WAITER, emptyServiceData, isValidServiceData, seedWaiterScenarios } from "./waiter-data";
-import { syncHandovers } from "../features/waiter/handover";
+import { syncHandovers } from "./handover";
 
 export const DEMO_STAFF: Staff = {
   id: "NV001",
   name: "Nguyễn Minh Anh",
   username: "receptionist",
   role: "RECEPTIONIST",
-  shift: "Ca làm việc demo",
+  shift: "Ca sáng 08:00–16:00 · Khu: Tầng 1",
+  areaId: "floor-1",
+  shiftId: "SH-AM",
 };
 export function createMockState(now = new Date()): ReceptionState {
   const areas = [
@@ -136,6 +140,9 @@ export function createMockState(now = new Date()): ReceptionState {
       tableId,
       status,
       source: i < 2 ? "WEB" : "PHONE",
+      email: i === 0 ? "quocbao@example.com" : undefined,
+      occasion: i === 0 ? "Sinh nhật" : undefined,
+      preorder: i === 0 ? [{ menuItemId: "grilled-shrimp", quantity: 2, note: "Ít cay" }, { menuItemId: "peach-tea", quantity: 4 }] : undefined,
       notes: i === 0 ? "Khách có trẻ nhỏ." : "",
       specialRequests: i === 12 ? "Phòng yên tĩnh, ghế trẻ em." : "",
       actualGuests: ["ARRIVED", "SEATED", "COMPLETED"].includes(status)
@@ -180,6 +187,7 @@ export function createMockState(now = new Date()): ReceptionState {
   const state: ReceptionState = {
     ...emptyServiceData(DEMO_STAFF),
     version: 1,
+    settings: { ...DEFAULT_SETTINGS },
     seedDay: dayKey(now),
     session: null,
     areas,
@@ -210,6 +218,14 @@ export function createMockState(now = new Date()): ReceptionState {
   return state;
 }
 
+function validSettings(value: Partial<ReservationSettings> | undefined): ReservationSettings {
+  const ok = (n: unknown, max: number) => typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= max;
+  return {
+    bufferMinutes: ok(value?.bufferMinutes, 60) ? value!.bufferMinutes! : DEFAULT_SETTINGS.bufferMinutes,
+    noShowMinutes: ok(value?.noShowMinutes, 120) && value!.noShowMinutes! >= 5 ? value!.noShowMinutes! : DEFAULT_SETTINGS.noShowMinutes,
+  };
+}
+
 // Versioned storage; old demo dates are reseeded on the next launch, preserving
 // only the authenticated employee. No credentials are part of the stored state.
 export function restoreDemoState(
@@ -236,6 +252,9 @@ export function restoreDemoState(
         r &&
         typeof r.id === "string" &&
         r.status in STATUS_LABELS &&
+        (r.email === undefined || typeof r.email === "string") &&
+        (r.occasion === undefined || typeof r.occasion === "string") &&
+        (r.preorder === undefined || (Array.isArray(r.preorder) && r.preorder.every(p => p && typeof p.menuItemId === "string" && Number.isInteger(p.quantity) && p.quantity > 0 && p.quantity <= 99 && (p.note === undefined || (typeof p.note === "string" && p.note.length <= 300))))) &&
         r.customer &&
         typeof r.customer.name === "string" &&
         typeof r.customer.phone === "string" &&
@@ -285,8 +304,8 @@ export function restoreDemoState(
   const session = known ? { ...known } : null;
   if (saved.seedDay !== fresh.seedDay) return { ...fresh, session };
   const upgraded = saved.serviceVersion === undefined
-    ? { ...saved, ...emptyServiceData(DEMO_STAFF), session }
-    : { ...saved, session };
+    ? { ...saved, ...emptyServiceData(DEMO_STAFF), session, settings: { ...DEFAULT_SETTINGS } }
+    : { ...saved, session, settings: validSettings(saved.settings) };
   syncHandovers(upgraded);
   if (!isValidServiceData(upgraded)) throw new Error("Dữ liệu phục vụ lưu trên thiết bị không hợp lệ.");
   // Add the new demo seafood selection without changing saved prices, orders or availability.

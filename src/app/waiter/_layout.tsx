@@ -13,6 +13,5 @@ export default function WaiterLayout() {
     <Stack.Screen name="finish" options={{ title: "Kết thúc / dọn bàn" }} />
     <Stack.Screen name="notifications" options={{ title: "Thông báo" }} />
     <Stack.Screen name="history" options={{ title: "Lịch sử phục vụ" }} />
-    <Stack.Protected guard={__DEV__}><Stack.Screen name="dev-workflow" options={{ title: "Kiểm thử sự kiện mô phỏng" }} /></Stack.Protected>
   </Stack>;
 }

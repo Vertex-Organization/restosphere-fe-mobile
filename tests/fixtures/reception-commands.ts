@@ -1,6 +1,6 @@
-import { isReceptionist } from "../auth/roles";
-import { syncHandovers } from "../waiter/handover";
-import { STATUS_LABELS } from "./labels";
+import { isReceptionist } from "../../src/features/auth/roles";
+import { syncHandovers } from "./handover";
+import { STATUS_LABELS } from "../../src/features/reservations/labels";
 import {
   canAssignTable,
   canCheckIn,
@@ -11,13 +11,14 @@ import {
   getReservationActions,
   isTableAvailableForTimeRange,
   validateReservationInput,
-} from "./rules";
+} from "../../src/features/reservations/rules";
+import type { ReceptionNotificationKind } from "../../src/features/notifications/types";
 import type {
   ReceptionCommand,
   ReceptionState,
   Reservation,
   RuleResult,
-} from "./types";
+} from "../../src/features/reservations/types";
 
 function assertRule(result: RuleResult): void {
   if (!result.ok) throw new Error(result.reason);
@@ -33,9 +34,10 @@ export function executeCommand(
   const state = JSON.parse(JSON.stringify(current)) as ReceptionState;
   const at = now.toISOString();
   const id = () => String(state.nextId++);
-  const notify = (title: string, r: Reservation) =>
+  const notify = (title: string, r: Reservation, kind?: ReceptionNotificationKind) =>
     state.notifications.unshift({
       id: `n${id()}`,
+      kind,
       title,
       body: `${r.code} · ${r.customer.name}`,
       at,
@@ -69,6 +71,16 @@ export function executeCommand(
       if (!command.id || n.id === command.id) n.read = true;
     });
     return { state };
+  }
+  if (command.type === "request-exception") {
+    const reason = command.reason.trim();
+    if (reason.length < 5 || reason.length > 200) throw new Error("Lý do cần từ 5 đến 200 ký tự.");
+    const target = state.reservations.find(item => item.id === command.id);
+    if (!target) throw new Error("Không tìm thấy lịch đặt.");
+    state.outbox.unshift({ id: `out${id()}`, kind: "APPROVAL", audience: "MANAGER", targetId: target.id, at, title: `Yêu cầu phê duyệt đặt bàn ${target.code}`, body: reason });
+    target.history.push({ at, text: `Gửi yêu cầu phê duyệt tới quản lý: ${reason}` });
+    notify("Đã gửi yêu cầu tới Quản lý", target);
+    return { state, reservationId: target.id };
   }
   if (command.type === "create") {
     const input = {
@@ -128,9 +140,9 @@ export function executeCommand(
   const r = state.reservations.find((item) => item.id === command.id);
   if (!r) throw new Error("Không tìm thấy lịch đặt.");
   const action = command.type === "edit" ? "edit" : command.type;
-  if (!getReservationActions(r, now, state.session!.role).includes(action)) {
+  if (!getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(action)) {
     if (command.type === "check-in") assertRule(canCheckIn(r));
-    if (command.type === "no-show") assertRule(canMarkNoShow(r, now));
+    if (command.type === "no-show") assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
     throw new Error("Thao tác không được phép ở trạng thái hiện tại.");
   }
   switch (command.type) {
@@ -153,7 +165,7 @@ export function executeCommand(
     case "cancel":
     case "no-show": {
       if (!command.reason?.trim()) throw new Error("Vui lòng nhập lý do.");
-      if (command.type === "no-show") assertRule(canMarkNoShow(r, now));
+      if (command.type === "no-show") assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
       r.status =
         command.type === "reject"
           ? "REJECTED"
@@ -202,6 +214,9 @@ export function executeCommand(
         tableId: command.input.tableId,
         notes: command.input.notes,
         specialRequests: command.input.specialRequests,
+        email: command.input.email ?? r.email,
+        occasion: command.input.occasion ?? r.occasion,
+        preorder: command.input.preorder ?? r.preorder,
         customer: {
           name: command.input.customer.name.trim(),
           phone: command.input.customer.phone.trim(),
@@ -215,12 +230,20 @@ export function executeCommand(
       notify("Thông tin đặt bàn thay đổi", r);
       break;
     }
-    case "assign":
+    case "assign": {
       assertRule(canAssignTable(state, r, command.tableId, now));
+      const previous = r.tableId;
       assign(r, command.tableId);
       r.history.push({ at, text: `Gán bàn ${command.tableId}.` });
-      notify("Thay đổi bàn", r);
+      notify("Thay đổi bàn", r, previous && previous !== command.tableId ? "TABLE_REASSIGNED" : undefined);
+      const session = state.tableSessions.find((s) => s.reservationId === r.id && !s.closedAt);
+      if (previous && previous !== command.tableId && session) {
+        session.tableId = command.tableId;
+        state.waiterNotifications.unshift({ id: `wn${id()}`, sessionId: session.id, waiterId: session.waiterId, kind: "TABLE_REASSIGNED",
+          title: `Đổi bàn ${previous} → ${command.tableId}`, body: `${r.code} · ${r.customer.name}`, at, readBy: [] });
+      }
       break;
+    }
     case "check-in":
       assertRule(canCheckIn(r));
       if (!Number.isInteger(command.actualGuests) || command.actualGuests < 1)

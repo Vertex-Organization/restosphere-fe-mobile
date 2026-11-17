@@ -136,9 +136,9 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
       <Button
         title="Xác nhận khách đã đến"
         disabled={!check.ok}
-        onPress={() => {
+        onPress={async () => {
           try {
-            run({ type: "check-in", id: r.id, actualGuests: Number(actual) });
+            await run({ type: "check-in", id: r.id, actualGuests: Number(actual) });
             router.replace(
               needsTable
                 ? `/reception/reservations/assign?id=${r.id}`

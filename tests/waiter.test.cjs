@@ -1,15 +1,15 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { createMockState, DEMO_STAFF, restoreDemoState } = require("../.cache/tests/mocks/demo-data.js");
-const { DEMO_WAITER, OTHER_WAITER, emptyServiceData } = require("../.cache/tests/mocks/waiter-data.js");
-const { executeWaiterCommand: execute } = require("../.cache/tests/features/waiter/commands.js");
-const { executeCommand: reception } = require("../.cache/tests/features/reservations/commands.js");
-const { applyMockServiceEvent: event } = require("../.cache/tests/mocks/service-workflow.js");
-const { mockAuthenticationRepository: auth } = require("../.cache/tests/mocks/auth-repository.js");
-const { workspaceHref } = require("../.cache/tests/features/auth/roles.js");
-const { WAITER_PERMISSIONS, hasPermission } = require("../.cache/tests/features/auth/permissions.js");
-const selectors = require("../.cache/tests/features/waiter/selectors.js");
-const { normalizeSearch } = require("../.cache/tests/utils/search.js");
+const { createMockState, DEMO_STAFF, restoreDemoState } = require("../.cache/tests/tests/fixtures/demo-data.js");
+const { DEMO_WAITER, OTHER_WAITER, emptyServiceData } = require("../.cache/tests/tests/fixtures/waiter-data.js");
+const { executeWaiterCommand: execute } = require("../.cache/tests/tests/fixtures/waiter-commands.js");
+const { executeCommand: reception } = require("../.cache/tests/tests/fixtures/reception-commands.js");
+const { applyMockServiceEvent: event } = require("../.cache/tests/tests/fixtures/service-workflow.js");
+const { mockAuthenticationRepository: auth } = require("../.cache/tests/tests/fixtures/auth-repository.js");
+const { workspaceHref } = require("../.cache/tests/src/features/auth/roles.js");
+const { WAITER_PERMISSIONS, hasPermission } = require("../.cache/tests/src/features/auth/permissions.js");
+const selectors = require("../.cache/tests/src/features/waiter/selectors.js");
+const { normalizeSearch } = require("../.cache/tests/src/utils/search.js");
 const now = new Date("2026-11-11T12:00:00+07:00");
 const seed = () => ({ ...createMockState(now), session: { ...DEMO_WAITER } });
 const run = (s, c) => execute(s, c, now);
@@ -153,13 +153,46 @@ test("cross-table serving is rejected", () => {
   const s = accepted(); const ready = selectors.sessionItems(s, "waiter-s0").find((i) => i.status === "READY");
   assert.throws(() => run(s, { type: "serve", sessionId: pendingId(s), itemId: ready.id }));
 });
-test("kitchen refusal requires a reason and excludes only the cancelled item from total", () => {
+test("waiter request-cancel emits CANCEL_ITEM and manager decision applies cancellation", () => {
+  let s = submitted(); const sessionId = pendingId(s); const itemId = selectors.sessionItems(s, sessionId)[0].id;
+  assert.throws(() => run(s, { type: "request-cancel", sessionId, itemId, reason: "Khách đổi ý" }), /đang chế biến/);
+  s = mock(s, { type: "kitchen-accept", itemId });
+  assert.throws(() => run(s, { type: "request-cancel", sessionId, itemId, reason: "ngắn" }), /ký tự/);
+  s = run(s, { type: "request-cancel", sessionId, itemId, reason: "Khách đổi ý sang món khác" });
+  assert.equal(s.requests.length, 1); assert.equal(s.requests[0].status, "PENDING");
+  assert.throws(() => run(s, { type: "request-cancel", sessionId, itemId, reason: "Khách đổi ý lần hai" }), /chờ duyệt/);
+  s = mock(s, { type: "manager-cancel-decision", requestId: s.requests[0].id, approve: true, reason: "Đồng ý cho hủy món" });
+  assert.equal(selectors.sessionItems(s, sessionId)[0].status, "CANCELLED");
+  assert.equal(s.requests[0].status, "APPROVED");
+  assert.ok(selectors.visibleNotifications(s).some((n) => n.kind === "REQUEST_DECIDED"));
+});
+
+test("cancellation rejects foreign sessions, stale decisions and corrupt restored requests", () => {
+  let s = seed(); const sessionId = "waiter-s0";
+  const item = selectors.sessionItems(s, sessionId).find(i => i.status === "READY");
+  const c = { type: "request-cancel", sessionId, itemId: item.id, reason: "Khách muốn đổi món" };
+  assert.throws(() => run({ ...s, session: OTHER_WAITER }, c));
+  assert.throws(() => run(s, { ...c, sessionId: pendingId(s) }));
+  s = run(s, c);
+  assert.equal(s.orderItems.find(i => i.id === item.id).status, "READY");
+  assert.equal(s.outbox[0].kind, "APPROVAL");
+  assert.equal(restoreDemoState(JSON.parse(JSON.stringify(s)), now).requests[0].status, "PENDING");
+  const rejected = mock(s, { type: "manager-cancel-decision", requestId: s.requests[0].id, approve: false, reason: "Món đã chuẩn bị xong" });
+  assert.equal(rejected.orderItems.find(i => i.id === item.id).status, "READY");
+  assert.throws(() => mock(rejected, { type: "manager-cancel-decision", requestId: s.requests[0].id, approve: true, reason: "Đồng ý hủy món" }));
+  const servedState = run(s, { type: "serve", sessionId, itemId: item.id });
+  assert.throws(() => mock(servedState, { type: "manager-cancel-decision", requestId: s.requests[0].id, approve: true, reason: "Đồng ý hủy món" }));
+  const broken = JSON.parse(JSON.stringify(s)); broken.requests[0].targetId = "missing";
+  assert.throws(() => restoreDemoState(broken, now));
+});
+
+test("kitchen refusal requires a reason and excludes only the rejected item from total", () => {
   let s = submitted(); const sessionId = pendingId(s); const itemId = selectors.sessionItems(s, sessionId)[0].id;
   assert.throws(() => mock(s, { type: "kitchen-reject", itemId, reason: "" }));
   s = mock(s, { type: "kitchen-reject", itemId, reason: "Hết nguyên liệu" });
   assert.equal(selectors.sessionTotal(s, sessionId), 0);
-  assert.equal(selectors.sessionItems(s, sessionId)[0].cancellationReason, "Hết nguyên liệu");
-  assert.ok(selectors.visibleNotifications(s).some((n) => n.kind === "REJECTED"));
+  assert.equal(selectors.sessionItems(s, sessionId)[0].rejectionReason, "Hết nguyên liệu");
+  assert.ok(selectors.visibleNotifications(s).some((n) => n.kind === "ITEM_REJECTED"));
   assert.throws(() => run(s, { type: "request-payment", sessionId }));
 });
 test("payment requires served items and no remaining draft", () => {
@@ -176,6 +209,24 @@ test("requesting payment freezes ordering and does not confirm PAID", () => {
   assert.throws(() => run(s, { type: "request-payment", sessionId }));
   assert.throws(() => run(s, { type: "guest-left", sessionId, confirmed: true }));
 });
+test("waiter can withdraw payment request and cashier events update bill lifecycle", () => {
+  let s = requested(); const sessionId = pendingId(s); const bill = selectors.sessionBill(s, sessionId);
+  assert.equal(bill.status, "PAYMENT_REQUESTED");
+  assert.equal(bill.requestedAmount, selectors.sessionTotal(s, sessionId));
+  s = run(s, { type: "withdraw-payment-request", sessionId });
+  assert.equal(selectors.sessionBill(s, sessionId).status, "UNPAID");
+  assert.equal(s.outbox[0].kind, "PAYMENT_REQUEST_WITHDRAWN");
+  assert.equal(s.outbox[0].audience, "CASHIER");
+  s = run(s, { type: "request-payment", sessionId });
+  assert.equal(s.outbox[0].kind, "PAYMENT_REQUEST");
+  assert.equal(s.outbox[0].audience, "CASHIER");
+  s = mock(s, { type: "cashier-bill-updated", billId: bill.id });
+  assert.ok(selectors.visibleNotifications(s).some((n) => n.kind === "BILL_UPDATED"));
+  s = mock(s, { type: "cashier-return", billId: bill.id, reason: "Bàn cần kiểm tra lại món" });
+  assert.equal(selectors.sessionBill(s, sessionId).status, "UNPAID");
+  assert.ok(selectors.visibleNotifications(s).some((n) => n.kind === "PAYMENT_RETURNED"));
+});
+
 test("cashier PAID retains guests and OCCUPIED table until explicit guest-left", () => {
   let s = requested(); const sessionId = pendingId(s); const billId = selectors.sessionBill(s, sessionId).id;
   s = mock(s, { type: "cashier-paid", billId });
@@ -232,4 +283,55 @@ test("corrupt service storage is rejected, and stored elevated roles are never t
   assert.throws(() => restoreDemoState(s, now), /không hợp lệ/);
   const spoofed = seed(); spoofed.session.role = "MANAGER";
   assert.equal(restoreDemoState(spoofed, now).session, null);
+});
+
+test("kitchen incident event notifies the waiter with INCIDENT and validates description", () => {
+  const s = submitted(); const sessionId = pendingId(s); const itemId = selectors.sessionItems(s, sessionId)[0].id;
+  assert.throws(() => mock(s, { type: "kitchen-incident", itemId, description: "ng" }));
+  const next = mock(s, { type: "kitchen-incident", itemId, description: "Thiet bi gap su co" });
+  assert.equal(next.waiterNotifications[0].kind, "INCIDENT");
+  assert.equal(next.waiterNotifications[0].sessionId, sessionId);
+  assert.equal(selectors.sessionItems(next, sessionId)[0].status, "SUBMITTED");
+});
+test("kitchen menu status event updates menu and notifies every waiter without a session", () => {
+  const s = submitted(); const menu = s.menuItems.find((m) => m.status === "AVAILABLE");
+  const next = mock(s, { type: "kitchen-menu-status", menuItemId: menu.id, status: "SOLD_OUT" });
+  assert.equal(next.menuItems.find((m) => m.id === menu.id).status, "SOLD_OUT");
+  assert.equal(next.waiterNotifications[0].kind, "MENU_AVAILABILITY");
+  assert.ok(selectors.visibleNotifications(next).some((n) => n.kind === "MENU_AVAILABILITY"));
+  assert.throws(() => mock(next, { type: "kitchen-menu-status", menuItemId: menu.id, status: "SOLD_OUT" }));
+  assert.throws(() => run(next, { type: "add-draft", sessionId: pendingId(next), menuItemId: menu.id }));
+});
+test("waiter priority request requires a reason, is sent once and reaches the kitchen outbox", () => {
+  const s = submitted(); const sessionId = pendingId(s); const orderId = s.orders.find((o) => o.sessionId === sessionId).id;
+  assert.throws(() => run(s, { type: "request-priority", sessionId, orderId, reason: "ng" }));
+  assert.throws(() => run(s, { type: "request-priority", sessionId, orderId: "missing", reason: "Khach can di som" }));
+  const next = run(s, { type: "request-priority", sessionId, orderId, reason: "Khach can di som" });
+  assert.equal(next.orders.find((o) => o.id === orderId).priority.reason, "Khach can di som");
+  assert.equal(next.outbox[0].kind, "PRIORITY");
+  assert.equal(next.outbox[0].audience, "KITCHEN");
+  assert.throws(() => run(next, { type: "request-priority", sessionId, orderId, reason: "Khach can di som" }));
+});
+test("unaccepted handovers are visible only to waiters assigned to the same area", () => {
+  const s = seed(); const session = s.tableSessions.find((t) => t.tableId === "A03");
+  assert.equal(s.tables.find((t) => t.id === "A03").areaId, "floor-1");
+  assert.equal(selectors.canViewSession(s, session), true);
+  assert.equal(selectors.canViewSession({ ...s, session: { ...OTHER_WAITER } }, session), false);
+  assert.equal(selectors.canViewSession({ ...s, session: { ...OTHER_WAITER, areaId: undefined } }, session), true);
+  assert.ok(DEMO_WAITER.shift.includes("Tầng 1") && DEMO_WAITER.shiftId);
+});
+test("web reservation and manager exception events reach reception notifications with explicit kinds", () => {
+  const s = seed();
+  assert.throws(() => mock(s, { type: "web-reservation", customer: "", phone: "0901234567", guests: 2, startsAt: now.toISOString() }));
+  assert.throws(() => mock(s, { type: "web-reservation", customer: "Khach", phone: "abc", guests: 2, startsAt: now.toISOString() }));
+  const created = mock(s, { type: "web-reservation", customer: "Khach web", phone: "0901234567", guests: 2, startsAt: new Date(now.getTime() + 240 * 60000).toISOString() });
+  assert.equal(created.notifications[0].kind, "NEW_WEB_RESERVATION");
+  assert.equal(created.reservations[0].source, "WEB");
+  assert.equal(created.reservations[0].status, "PENDING");
+  const rid = created.reservations[0].id;
+  assert.throws(() => mock(created, { type: "manager-exception-decision", reservationId: rid, approve: true, reason: "Dong y ngoai le" }));
+  const asked = reception({ ...created, session: { ...DEMO_STAFF } }, { type: "request-exception", id: rid, reason: "Doan khach dong" }, now).state;
+  assert.throws(() => mock(asked, { type: "manager-exception-decision", reservationId: rid, approve: true, reason: "ng" }));
+  const decided = mock(asked, { type: "manager-exception-decision", reservationId: rid, approve: true, reason: "Dong y ngoai le" });
+  assert.equal(decided.notifications[0].kind, "REQUEST_DECIDED");
 });

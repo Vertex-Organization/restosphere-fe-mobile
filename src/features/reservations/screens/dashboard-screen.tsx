@@ -104,8 +104,8 @@ export default function DashboardScreen() {
         ListEmptyComponent={<EmptyState title="Đã xử lý hết công việc" description="Các lịch cần xác nhận, đón khách và bàn giao sẽ hiển thị tại đây." />}
       />
       {confirm && <ConfirmDialog title="Xác nhận đặt bàn" message={`Xác nhận ${confirm.code} và giữ bàn ${candidate ?? "phù hợp"}. Chính sách demo tự giữ một bàn để tránh nhận quá khả năng.`}
-        onCancel={() => setConfirm(null)} onConfirm={() => {
-          try { run({ type: "confirm", id: confirm.id }); setConfirm(null); }
+        onCancel={() => setConfirm(null)} onConfirm={async () => {
+          try { await run({ type: "confirm", id: confirm.id }); setConfirm(null); }
           catch (e) { setError((e as Error).message); setConfirm(null); }
         }} />}
     </Screen>

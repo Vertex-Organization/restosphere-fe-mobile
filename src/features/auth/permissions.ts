@@ -2,7 +2,7 @@ import type { Staff } from "./types";
 
 export const WAITER_PERMISSIONS = [
   "table.read_assigned", "table.accept_handover", "order.create", "order.submit",
-  "order.read", "order.mark_served", "payment.request", "payment.read_status",
+  "order.read", "order.mark_served", "order.request_cancel", "order.request_priority", "payment.request", "payment.read_status",
   "table.mark_guest_left", "table.mark_cleaned",
 ] as const;
 export type WaiterPermission = (typeof WAITER_PERMISSIONS)[number];

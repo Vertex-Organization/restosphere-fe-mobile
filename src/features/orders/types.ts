@@ -1,10 +1,11 @@
-export type OrderItemStatus = "DRAFT" | "SUBMITTED" | "PREPARING" | "READY" | "SERVED" | "CANCELLED";
+export type OrderItemStatus = "DRAFT" | "SUBMITTED" | "PREPARING" | "READY" | "SERVED" | "REJECTED" | "CANCELLED" | "VOIDED";
 export interface Order {
   id: string;
   sessionId: string;
   waiterId: string;
   submittedAt: string;
   sequence: number;
+  priority?: { at: string; by: string; reason: string };
 }
 export interface OrderItem {
   id: string;
@@ -19,6 +20,7 @@ export interface OrderItem {
   readyAt?: string;
   servedAt?: string;
   cancellationReason?: string;
+  rejectionReason?: string;
 }
 export interface DraftItem {
   id: string;

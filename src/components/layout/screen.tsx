@@ -22,7 +22,7 @@ export function Screen({
   login?: boolean;
   tabbed?: boolean;
 }) {
-  const { notice, storageError, retrySave, dismissNotice } = useApp();
+  const { notice, storageError, retrySave, dismissNotice, busy } = useApp();
   return (
     <SafeAreaView
       edges={
@@ -37,9 +37,10 @@ export function Screen({
       {!!storageError && (
         <View style={{ padding: 10, gap: 6 }}>
           <Message>{storageError}</Message>
-          <Button title="Thử lưu lại" onPress={retrySave} variant="secondary" />
+          <Button title="Tải lại từ máy chủ" onPress={retrySave} variant="secondary" />
         </View>
       )}
+      {busy && <Message>Đang gửi thao tác tới máy chủ…</Message>}
       {!!notice && !login && (
         <Pressable
           accessibilityRole="button"

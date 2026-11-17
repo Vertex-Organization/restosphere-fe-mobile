@@ -9,6 +9,14 @@ import { colors, radius } from "@/theme";
 import { canOrder, money, sessionDrafts } from "@/features/waiter/selectors";
 import { AmountRow, MissingSession, SessionHeading, openServiceScreen, useServiceSession, useWaiterAction } from "@/features/waiter/components/service-ui";
 
+function DraftNote({ note, name, editable, save }: { note: string; name: string; editable: boolean; save(note: string): Promise<void> }) {
+  const [text, setText] = useState(note);
+  return <View style={{ gap: 8 }}>
+    <Field label={`Ghi chú ${name}`} placeholder="Ít cay, không hành, ít đá…" multiline maxLength={300} value={text} editable={editable} onChangeText={setText} />
+    {text !== note && <Button title="Lưu ghi chú" disabled={!editable} onPress={() => save(text)} />}
+  </View>;
+}
+
 export default function CartScreen() {
   const { state } = useApp();
   const session = useServiceSession();
@@ -31,7 +39,7 @@ export default function CartScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}><FoodThumbnail itemId={menu.id} name={menu.name} size={56} /><View style={{ flex: 1, gap: 4 }}><Text style={[ui.text, { fontWeight: "600" }]}>{menu.name}</Text><Text style={ui.caption}>{money(menu.price)} / phần</Text><Text selectable style={[ui.label, { color: colors.primary, fontVariant: ["tabular-nums"] }]}>{money(menu.price * draft.quantity)}</Text></View></View>
         {menu.status !== "AVAILABLE" && <Message>Món đã hết hoặc ngừng bán. Xóa khỏi giỏ để gửi những món còn lại.</Message>}
         <View style={ui.row}><Button title="−" accessibilityLabel={`Giảm số lượng ${menu.name}`} variant="secondary" disabled={!editable || draft.quantity <= 1} onPress={() => edit(draft.quantity - 1)} /><Text accessibilityLabel={`Số lượng ${menu.name}`} style={ui.heading}>{draft.quantity}</Text><Button title="+" accessibilityLabel={`Tăng số lượng ${menu.name}`} variant="secondary" disabled={!editable || draft.quantity >= 99 || menu.status !== "AVAILABLE"} onPress={() => edit(draft.quantity + 1)} /><Button title="Xóa món" accessibilityLabel={`Xóa ${menu.name} khỏi giỏ`} variant="danger" disabled={!editable} onPress={() => act({ type: "remove-draft", sessionId: session.id, draftId: draft.id })} /></View>
-        <Field label={`Ghi chú ${menu.name}`} placeholder="Ít cay, không hành, ít đá…" multiline maxLength={300} value={draft.note} editable={editable} onChangeText={(note) => edit(draft.quantity, note)} />
+        <DraftNote key={`${draft.id}:${draft.note}`} name={menu.name} note={draft.note} editable={editable} save={(note) => edit(draft.quantity, note)} />
       </View>;
     })}
     <AmountRow label="Tạm tính lượt này" amount={total} />

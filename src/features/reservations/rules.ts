@@ -8,11 +8,11 @@ import type {
   Reservation,
   ReservationAction,
   ReservationInput,
+  ReservationSettings,
   RuleResult,
 } from "./types";
 
-export const BUFFER_MINUTES = 15;
-export const NO_SHOW_MINUTES = 30;
+export const DEFAULT_SETTINGS: ReservationSettings = { bufferMinutes: 15, noShowMinutes: 30 };
 const yes: RuleResult = { ok: true };
 const no = (reason: string): RuleResult => ({ ok: false, reason });
 export const holdsTable = (r: Reservation) =>
@@ -27,7 +27,7 @@ export const heldRange = (r: Reservation) => ({
 export function hasTimeConflict(
   a: Pick<ReservationInput, "startsAt" | "duration">,
   b: Pick<ReservationInput, "startsAt" | "duration">,
-  buffer = BUFFER_MINUTES,
+  buffer = DEFAULT_SETTINGS.bufferMinutes,
 ): boolean {
   const aStart = new Date(a.startsAt).getTime(),
     bStart = new Date(b.startsAt).getTime();
@@ -44,6 +44,7 @@ export function isTableAvailableForTimeRange(
   excludeId?: string,
   now = new Date(),
 ): RuleResult {
+  const buffer = state.settings.bufferMinutes;
   if (table.status === "OUT_OF_SERVICE")
     return no(`Bàn ${table.code} đang tạm ngưng sử dụng.`);
   if (input.guests > table.capacity)
@@ -53,18 +54,18 @@ export function isTableAvailableForTimeRange(
   const conflicts = state.reservations.filter(
     (r) => r.id !== excludeId && r.tableId === table.id && holdsTable(r),
   );
-  if (conflicts.some((r) => hasTimeConflict(heldRange(r), input)))
+  if (conflicts.some((r) => hasTimeConflict(heldRange(r), input, buffer)))
     return no(
-      `Bàn ${table.code} đã có lịch đặt trùng khung giờ (gồm ${BUFFER_MINUTES} phút đệm).`,
+      `Bàn ${table.code} đã có lịch đặt trùng khung giờ (gồm ${buffer} phút đệm).`,
     );
   // Physical state is separate from timed holds. A seated guest still present blocks
   // the table until their expected end + buffer, or at least now + buffer if overdue.
   if (table.status === "OCCUPIED") {
     const seated = conflicts.filter((r) => r.status === "SEATED");
     const release = Math.max(
-      now.getTime() + BUFFER_MINUTES * 60_000,
+      now.getTime() + buffer * 60_000,
       ...seated.map(
-        (r) => endsAt(heldRange(r)).getTime() + BUFFER_MINUTES * 60_000,
+        (r) => endsAt(heldRange(r)).getTime() + buffer * 60_000,
       ),
     );
     if (!seated.length || new Date(input.startsAt).getTime() < release)
@@ -166,17 +167,18 @@ export function canHandover(
     now,
   );
 }
-export function canMarkNoShow(r: Reservation, now = new Date()): RuleResult {
+export function canMarkNoShow(r: Reservation, now = new Date(), noShowMinutes = DEFAULT_SETTINGS.noShowMinutes): RuleResult {
   if (r.status !== "CONFIRMED")
     return no("Chỉ đánh dấu không đến cho lịch đã xác nhận và chưa check-in.");
-  return lateMinutes(r, now) >= NO_SHOW_MINUTES
+  return lateMinutes(r, now) >= noShowMinutes
     ? yes
-    : no(`Cần chờ ít nhất ${NO_SHOW_MINUTES} phút sau giờ hẹn.`);
+    : no(`Cần chờ ít nhất ${noShowMinutes} phút sau giờ hẹn.`);
 }
 export function getReservationActions(
   r: Reservation,
   now = new Date(),
   role: Role = "RECEPTIONIST",
+  noShowMinutes = DEFAULT_SETTINGS.noShowMinutes,
 ): ReservationAction[] {
   if (!isReceptionist(role)) return [];
   switch (r.status) {
@@ -188,7 +190,7 @@ export function getReservationActions(
         "check-in",
         "edit",
         "cancel",
-        ...(canMarkNoShow(r, now).ok ? ["no-show" as const] : []),
+        ...(canMarkNoShow(r, now, noShowMinutes).ok ? ["no-show" as const] : []),
       ];
     case "ARRIVED":
       return ["assign", "handover"];
@@ -203,6 +205,9 @@ export function validateReservationInput(
   walkIn = false,
 ): Record<string, string> {
   const errors: Record<string, string> = {};
+  if (input.email !== undefined && (typeof input.email !== "string" || (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)))) errors.email = "Email không hợp lệ.";
+  if (input.occasion !== undefined && (typeof input.occasion !== "string" || input.occasion.length > 200)) errors.occasion = "Dịp đặc biệt không hợp lệ.";
+  if (input.preorder !== undefined && (!Array.isArray(input.preorder) || input.preorder.some(p => !p || typeof p.menuItemId !== "string" || !p.menuItemId.trim() || !Number.isInteger(p.quantity) || p.quantity < 1 || p.quantity > 99 || (p.note !== undefined && (typeof p.note !== "string" || p.note.length > 300))))) errors.preorder = "Món đặt trước không hợp lệ.";
   if (!walkIn && !input.customer.name.trim()) errors.name = "Nhập tên khách.";
   if (
     input.customer.phone &&

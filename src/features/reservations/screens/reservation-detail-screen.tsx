@@ -37,6 +37,7 @@ export default function ReservationDetailScreen() {
   const [dialog, setDialog] = useState<
     "confirm" | "reject" | "cancel" | "no-show" | null
   >(null);
+  const [exceptionOpen, setExceptionOpen] = useState(false);
   const [error, setError] = useState("");
   const r = state.reservations.find((item) => item.id === id);
   if (!r)
@@ -50,7 +51,7 @@ export default function ReservationDetailScreen() {
     );
   const table = state.tables.find((t) => t.id === r.tableId);
   const area = state.areas.find((a) => a.id === table?.areaId);
-  const actions = getReservationActions(r, now, state.session!.role);
+  const actions = getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes);
   const nextAction: ReservationAction | undefined = r.status === "PENDING" ? "confirm"
     : r.status === "CONFIRMED" ? "check-in"
     : r.status === "ARRIVED" ? (table ? "handover" : "assign") : undefined;
@@ -98,7 +99,7 @@ export default function ReservationDetailScreen() {
         />
         <DetailRow
           label="Thời lượng dự kiến"
-          value={`${r.duration} phút + 15 phút đệm`}
+          value={`${r.duration} phút + ${state.settings.bufferMinutes} phút đệm`}
         />
         <DetailRow
           label="Bàn / khu vực"
@@ -117,6 +118,19 @@ export default function ReservationDetailScreen() {
             state.areas.find((a) => a.id === r.areaId)?.name ?? "Không yêu cầu"
           }
         />
+        {r.email && <DetailRow label="Email" value={r.email} />}
+        {r.occasion && <DetailRow label="Dịp đặc biệt" value={r.occasion} />}
+        {!!r.preorder?.length && (
+          <DetailRow
+            label="Món đặt trước"
+            value={r.preorder
+              .map((p) => {
+                const dish = state.menuItems.find((m) => m.id === p.menuItemId);
+                return `${dish?.name ?? p.menuItemId} × ${p.quantity}`;
+              })
+              .join(", ")}
+          />
+        )}
         <DetailRow label="Nguồn đặt bàn" value={SOURCE_LABELS[r.source]} />
         <DetailRow label="Ghi chú" value={r.notes || "Không có"} />
         <DetailRow
@@ -142,7 +156,7 @@ export default function ReservationDetailScreen() {
       )}
       {r.status === "CONFIRMED" && (
         <Text style={ui.muted}>
-          Chỉ đánh dấu không đến sau 30 phút chờ. Không tự động chuyển trạng
+          Chỉ đánh dấu không đến sau {state.settings.noShowMinutes} phút chờ. Không tự động chuyển trạng
           thái.
         </Text>
       )}
@@ -166,6 +180,9 @@ export default function ReservationDetailScreen() {
           />
         ))}
       </Section>}
+      {["PENDING", "CONFIRMED", "ARRIVED"].includes(r.status) && (
+        <Button title="Gửi yêu cầu ngoại lệ tới Quản lý" variant="secondary" onPress={() => setExceptionOpen(true)} />
+      )}
       <Section title="Lịch sử">
         {r.history
           .slice()
@@ -177,6 +194,22 @@ export default function ReservationDetailScreen() {
             </View>
           ))}
       </Section>
+      {exceptionOpen && (
+        <ConfirmDialog
+          title="Yêu cầu ngoại lệ"
+          requireReason
+          message={`Gửi yêu cầu phê duyệt cho ${r.code} (quá sức chứa, đổi giờ sát giờ...) tới Quản lý?`}
+          onCancel={() => setExceptionOpen(false)}
+          onConfirm={async (reason) => {
+            try {
+              await run({ type: "request-exception", id: r.id, reason: reason ?? "" });
+            } catch (e) {
+              setError((e as Error).message);
+            }
+            setExceptionOpen(false);
+          }}
+        />
+      )}
       {dialog && (
         <ConfirmDialog
           key={dialog}
@@ -188,9 +221,9 @@ export default function ReservationDetailScreen() {
               : `${ACTION_LABELS[dialog]} ${r.code}? Phần giữ bàn sẽ được giải phóng.`
           }
           onCancel={() => setDialog(null)}
-          onConfirm={(reason) => {
+          onConfirm={async (reason) => {
             try {
-              run({ type: dialog, id: r.id, reason });
+              await run({ type: dialog, id: r.id, reason });
               setDialog(null);
             } catch (e) {
               setError((e as Error).message);

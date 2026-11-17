@@ -1,4 +1,4 @@
-import type { AuthenticationRepository } from "../features/auth/types";
+import type { AuthenticationRepository } from "../../src/features/auth/types";
 import { DEMO_STAFF } from "./demo-data";
 import { DEMO_WAITER, OTHER_WAITER } from "./waiter-data";
 

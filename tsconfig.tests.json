@@ -6,16 +6,12 @@
     "strict": true,
     "skipLibCheck": true,
     "types": [],
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": ".cache/tests"
   },
   "include": [
-    "src/features/reservations/commands.ts",
     "src/features/reservations/rules.ts",
-    "src/mocks/demo-data.ts",
-    "src/mocks/auth-repository.ts",
-    "src/mocks/service-workflow.ts",
-    "src/features/waiter/commands.ts",
+    "tests/fixtures/*.ts",
     "src/utils/dates.ts"
   ]
 }
