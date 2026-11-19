@@ -95,14 +95,15 @@ function ReservationForm({
       startsAt: walkIn ? new Date().toISOString() : input.startsAt,
     };
     const validation = validateReservationInput(
-      actualInput,
+      // Preorder is not editable here and may hold web kg quantities (1.5); the server validates it.
+      { ...actualInput, preorder: undefined },
       new Date(),
       !r || r.startsAt !== actualInput.startsAt,
       walkIn,
     );
     setErrors(validation);
     setError("");
-    if (!name.trim() || !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s()-]/g, "")) || !areaId)
+    if ((!walkIn && !name.trim()) || !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s().-]/g, "")) || !areaId)
       return setError("Nhập tên khách, số điện thoại hợp lệ và chọn khu vực.");
     if (Object.keys(validation).length)
       return setError("Kiểm tra các trường được đánh dấu bên dưới.");
@@ -136,7 +137,7 @@ function ReservationForm({
       </Text>
       <Text style={ui.muted}>
         {walkIn
-            ? "Chọn bàn sẵn sàng, tạo lịch rồi xác nhận và check-in trước khi bàn giao."
+            ? "Chọn bàn sẵn sàng. Khách được ghi nhận đã đến, sau đó bàn giao cho phục vụ."
           : "Lưu lịch chưa đồng nghĩa đã xác nhận. Lịch chờ chưa giữ bàn."}
       </Text>
       {!!error && <Message>{error}</Message>}
