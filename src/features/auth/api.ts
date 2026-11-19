@@ -1,5 +1,16 @@
 import type { Staff } from "./types";
 
+let detectedBaseUrl = "";
+
+export function setDetectedApiBaseUrl(url: string) {
+  detectedBaseUrl = url.replace(/\/+$/, "");
+}
+
+export function apiBaseUrl() {
+  const configured = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, "");
+  return configured && configured.toLowerCase() !== "auto" ? configured : detectedBaseUrl;
+}
+
 interface Tokens { accessToken: string; refreshToken: string; expiresIn: number }
 // shortcut: tokens stay in memory; add SecureStore when persistent sign-in is required.
 let tokens: Tokens | null = null;
@@ -9,7 +20,7 @@ let refreshing: Promise<Tokens> | null = null;
 export async function authenticatedRequest<T>(path: string, body?: unknown): Promise<T> {
   if (!tokens) throw new Error("Vui lòng đăng nhập lại.");
   const generation = sessionGeneration;
-  const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, "");
+  const base = apiBaseUrl();
   if (!base) throw new Error("Chưa cấu hình EXPO_PUBLIC_API_URL.");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -44,7 +55,7 @@ export async function authenticatedRequest<T>(path: string, body?: unknown): Pro
 export const authenticatedGet = <T>(path: string) => authenticatedRequest<T>(path);
 
 async function request<T>(path: string, body?: unknown, accessToken?: string): Promise<T> {
-  const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, "");
+  const base = apiBaseUrl();
   if (!base) throw new Error("Chưa cấu hình EXPO_PUBLIC_API_URL cho máy chủ API.");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);

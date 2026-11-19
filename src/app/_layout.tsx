@@ -1,3 +1,4 @@
+import "@/features/auth/dev-api-url";
 import { Stack } from "expo-router";
 import { DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";

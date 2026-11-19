@@ -1,7 +1,8 @@
+import { apiBaseUrl } from "../auth/api";
 import type { MenuCategory, MenuItem } from "./types";
 
 async function get<T>(path: string): Promise<T> {
-  const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, "");
+  const base = apiBaseUrl();
   if (!base) throw new Error("Chưa cấu hình EXPO_PUBLIC_API_URL.");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
