@@ -36,7 +36,7 @@ export default function ReservationFormScreen() {
       <Screen>
         <EmptyState
           title="Không thể chỉnh sửa lịch này"
-          description="Chỉ sửa lịch đang chờ hoặc đã xác nhận, trước khi khách check-in."
+          description="Chỉ sửa lịch đang chờ hoặc đã xác nhận, trước khi khách đến."
         />
       </Screen>
     );
@@ -148,7 +148,7 @@ function ReservationForm({
       <Text style={ui.muted}>
         {walkIn
             ? "Chọn bàn sẵn sàng. Khách được ghi nhận đã đến, sau đó bàn giao cho phục vụ."
-          : "Lưu lịch chưa đồng nghĩa đã xác nhận. Lịch chờ chưa giữ bàn."}
+          : "Lịch mới ở trạng thái chờ xác nhận và chưa giữ bàn."}
       </Text>
       {!!error && <Message>{error}</Message>}
       <Section title="Thông tin khách">

@@ -56,7 +56,7 @@ export function isTableAvailableForTimeRange(
   );
   if (conflicts.some((r) => hasTimeConflict(heldRange(r), input, buffer)))
     return no(
-      `Bàn ${table.code} đã có lịch đặt trùng khung giờ (gồm ${buffer} phút đệm).`,
+      `Bàn ${table.code} đã có lịch khác trùng khung giờ (tính cả ${buffer} phút dọn bàn).`,
     );
   // Physical state is separate from timed holds. A seated guest still present blocks
   // the table until their expected end + buffer, or at least now + buffer if overdue.

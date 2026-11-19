@@ -27,7 +27,7 @@ const ACTION_LABELS: Record<ReservationAction, string> = {
   cancel: "Hủy lịch",
   edit: "Chỉnh sửa",
   assign: "Gán / đổi bàn",
-  "check-in": "Check-in",
+  "check-in": "Nhận khách",
   handover: "Bàn giao cho phục vụ",
   "no-show": "Đánh dấu không đến",
 };
@@ -99,7 +99,7 @@ export default function ReservationDetailScreen() {
         />
         <DetailRow
           label="Thời lượng dự kiến"
-          value={`${r.duration} phút + ${state.settings.bufferMinutes} phút đệm`}
+          value={`${r.duration} phút`}
         />
         <DetailRow
           label="Bàn / khu vực"
@@ -126,7 +126,7 @@ export default function ReservationDetailScreen() {
             value={r.preorder
               .map((p) => {
                 const dish = state.menuItems.find((m) => m.id === p.menuItemId);
-                return `${dish?.name ?? p.menuItemId} × ${p.quantity}`;
+                return `${dish?.name ?? "Món không còn bán"} × ${p.quantity}`;
               })
               .join(", ")}
           />
@@ -138,7 +138,7 @@ export default function ReservationDetailScreen() {
           value={r.specialRequests || "Không có"}
         />
         {r.arrivedAt && (
-          <DetailRow label="Check-in lúc" value={dateTimeLabel(r.arrivedAt)} />
+          <DetailRow label="Khách đến lúc" value={dateTimeLabel(r.arrivedAt)} />
         )}
         {r.handedOverAt && (
           <DetailRow
@@ -150,20 +150,17 @@ export default function ReservationDetailScreen() {
       </View>
       {r.status === "PENDING" && (
         <Message kind="info">
-          Xác nhận sẽ kiểm tra khả năng tiếp nhận và giữ một bàn phù hợp. Lịch
-          đang chờ chưa giữ chỗ.
+          Lịch chưa được giữ bàn. Khi xác nhận, hệ thống sẽ tự giữ một bàn phù hợp.
         </Message>
       )}
       {r.status === "CONFIRMED" && (
         <Text style={ui.muted}>
-          Chỉ đánh dấu không đến sau {state.settings.noShowMinutes} phút chờ. Không tự động chuyển trạng
-          thái.
+          Nếu khách trễ quá {state.settings.noShowMinutes} phút, lịch sẽ tự chuyển sang “Không đến”.
         </Text>
       )}
       {!actions.length && (
         <Message kind="info">
-          Lịch chỉ được xem ở trạng thái này. Lễ tân không thực hiện thanh toán,
-          checkout hoặc dọn bàn.
+          Lịch này chỉ để xem. Thanh toán và dọn bàn do phục vụ và thu ngân xử lý.
         </Message>
       )}
       {!!otherActions.length && <Section title="Thao tác khác">
@@ -181,7 +178,7 @@ export default function ReservationDetailScreen() {
         ))}
       </Section>}
       {["PENDING", "CONFIRMED", "ARRIVED"].includes(r.status) && (
-        <Button title="Gửi yêu cầu ngoại lệ tới Quản lý" variant="secondary" onPress={() => setExceptionOpen(true)} />
+        <Button title="Nhờ quản lý duyệt" variant="secondary" onPress={() => setExceptionOpen(true)} />
       )}
       <Section title="Lịch sử">
         {r.history
@@ -196,9 +193,9 @@ export default function ReservationDetailScreen() {
       </Section>
       {exceptionOpen && (
         <ConfirmDialog
-          title="Yêu cầu ngoại lệ"
+          title="Nhờ quản lý duyệt"
           requireReason
-          message={`Gửi yêu cầu phê duyệt cho ${r.code} (quá sức chứa, đổi giờ sát giờ...) tới Quản lý?`}
+          message={`Gửi lịch ${r.code} cho quản lý xem xét (ví dụ: khách đông hơn sức chứa, đổi giờ sát giờ). Ghi rõ lý do bên dưới.`}
           onCancel={() => setExceptionOpen(false)}
           onConfirm={async (reason) => {
             try {
@@ -218,7 +215,7 @@ export default function ReservationDetailScreen() {
           message={
             dialog === "confirm"
               ? `Xác nhận ${r.code} và giữ bàn ${candidate ?? "phù hợp"}?`
-              : `${ACTION_LABELS[dialog]} ${r.code}? Phần giữ bàn sẽ được giải phóng.`
+              : `${ACTION_LABELS[dialog]} ${r.code}? Bàn đang giữ cho lịch này sẽ được trả lại.`
           }
           onCancel={() => setDialog(null)}
           onConfirm={async (reason) => {

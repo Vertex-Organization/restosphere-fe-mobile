@@ -76,9 +76,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       apply(result.data); setStorageError("");
       if (!["read", "read-notification"].includes(value.type)) setNotice(result.summary);
       return result.reservationId;
-    } catch (error) {
-      if (attempt === generation.current) setStorageError((error as Error).message);
-      throw error;
     } finally { pending.current = false; setBusy(false); }
   }
   return <Context.Provider value={{ state, ready: true, now, storageError, notice, busy, signIn, signOut,

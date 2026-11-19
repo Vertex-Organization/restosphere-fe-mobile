@@ -64,7 +64,7 @@ export default function TablesScreen() {
             </View>
             {!!status && !filtersOpen && <View style={{ alignSelf: "flex-start" }}><FilterChip title={`${TABLE_LABELS[status as keyof typeof TABLE_LABELS]} · Bỏ lọc ×`} selected onPress={() => setStatus("")} /></View>}
             {filtersOpen && <View style={[ui.panel, { gap: 16 }]}>
-              <Select label="Trạng thái vận hành" value={status} onChange={setStatus}
+              <Select label="Trạng thái bàn" value={status} onChange={setStatus}
                 options={[{ value: "", label: "Tất cả trạng thái" }, ...Object.entries(TABLE_LABELS).map(([value, label]) => ({ value, label }))]} />
               <Field label="Sức chứa tối thiểu" keyboardType="number-pad" value={capacity} onChangeText={setCapacity} placeholder="Số khách" error={valid ? undefined : "Nhập số nguyên không âm."} />
               {(!!status || !!capacity) && <Button title="Xóa bộ lọc bàn" variant="secondary" onPress={() => { setStatus(""); setCapacity(""); }} />}

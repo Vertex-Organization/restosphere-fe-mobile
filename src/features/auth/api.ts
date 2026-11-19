@@ -36,7 +36,7 @@ export async function authenticatedRequest<T>(path: string, body?: unknown): Pro
     if (generation !== sessionGeneration) throw new Error("Phiên đăng nhập đã thay đổi.");
     if (!response.ok) {
       const error = await response.json().catch(() => null);
-      throw new Error(error?.message || (response.status === 401 ? "Phiên đã hết hạn. Vui lòng đăng nhập lại." : "Không thể hoàn tất yêu cầu máy chủ."));
+      throw new Error(error?.detail || error?.message || (response.status === 401 ? "Phiên đã hết hạn. Vui lòng đăng nhập lại." : "Không thể hoàn tất yêu cầu máy chủ."));
     }
     return await response.json() as T;
   } finally { clearTimeout(timer); }

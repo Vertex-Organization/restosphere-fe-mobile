@@ -48,7 +48,7 @@ export default function CheckInScreen() {
           <View style={{ marginBottom: 12, gap: 10 }}>
             <SearchInput value={query} onChangeText={setQuery} />
             <Text style={ui.muted}>
-              Chỉ hiển thị lịch đã xác nhận. Ngày giờ được ghi ở từng lịch.
+              Chỉ hiển thị lịch đã xác nhận. Tìm theo tên, số điện thoại hoặc mã đặt bàn.
             </Text>
           </View>
         }
@@ -64,7 +64,7 @@ export default function CheckInScreen() {
         ListEmptyComponent={
           <EmptyState
             title="Không có lịch đã xác nhận phù hợp"
-            description="Kiểm tra thông tin tìm kiếm hoặc xác nhận lịch trước khi check-in."
+            description="Kiểm tra lại từ khóa tìm kiếm, hoặc xác nhận lịch trước khi nhận khách."
           />
         }
       />
@@ -123,7 +123,7 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
       )}
       {!table && (
         <Message kind="info">
-          Cần gán bàn sau check-in, trước khi bàn giao.
+          Lịch chưa có bàn. Hãy chọn bàn trước khi bàn giao cho phục vụ.
         </Message>
       )}
       {!tooMany && availability && !availability.ok && (
@@ -134,7 +134,7 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
       )}
       {!!error && <Message>{error}</Message>}
       <Message kind="info">
-        Check-in chỉ ghi nhận khách đã đến, chưa chuyển bàn sang đang sử dụng.
+        Bước này chỉ ghi nhận khách đã đến. Bàn chuyển sang “đang sử dụng” khi bàn giao cho phục vụ.
       </Message>
       <Button
         title="Xác nhận khách đã đến"

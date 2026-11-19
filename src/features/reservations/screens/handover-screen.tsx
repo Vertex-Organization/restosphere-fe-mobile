@@ -41,7 +41,7 @@ export default function HandoverScreen() {
         />
         <DetailRow
           label="Đến lúc"
-          value={r.arrivedAt ? dateTimeLabel(r.arrivedAt) : "Chưa check-in"}
+          value={r.arrivedAt ? dateTimeLabel(r.arrivedAt) : "Chưa đến"}
         />
         <DetailRow label="Ghi chú" value={r.notes || "Không có"} />
         <DetailRow
@@ -71,7 +71,7 @@ export default function HandoverScreen() {
       {confirm && (
         <ConfirmDialog
           title="Bàn giao cho phục vụ"
-          message={`${r.actualGuests} khách nhận bàn ${table?.code ?? "—"}. Sau bàn giao, lễ tân chỉ được xem lượt phục vụ.`}
+          message={`${r.actualGuests} khách vào bàn ${table?.code ?? "—"}. Sau khi bàn giao, phục vụ sẽ tiếp nhận bàn này.`}
           onCancel={() => setConfirm(false)}
           onConfirm={async () => {
             try {

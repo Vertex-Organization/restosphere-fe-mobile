@@ -9,7 +9,7 @@ export const STATUS_LABELS = {
   NO_SHOW: "Không đến",
 } as const;
 export const SOURCE_LABELS = {
-  WEB: "Khách đặt qua Web",
+  WEB: "Khách đặt qua website",
   PHONE: "Gọi điện",
   WALK_IN: "Khách trực tiếp",
 } as const;
