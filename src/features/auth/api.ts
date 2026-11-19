@@ -36,7 +36,8 @@ export async function authenticatedRequest<T>(path: string, body?: unknown): Pro
     if (generation !== sessionGeneration) throw new Error("Phiên đăng nhập đã thay đổi.");
     if (!response.ok) {
       const error = await response.json().catch(() => null);
-      throw new Error(error?.message || (response.status === 401 ? "Phiên đã hết hạn. Vui lòng đăng nhập lại." : "Không thể hoàn tất yêu cầu máy chủ."));
+      // Backend trả lỗi theo chuẩn ProblemDetail (RFC 9457): nội dung nằm ở "detail".
+      throw new Error(error?.detail || error?.message || (response.status === 401 ? "Phiên đã hết hạn. Vui lòng đăng nhập lại." : "Không thể hoàn tất yêu cầu máy chủ."));
     }
     return await response.json() as T;
   } finally { clearTimeout(timer); }
@@ -57,7 +58,7 @@ async function request<T>(path: string, body?: unknown, accessToken?: string): P
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
-    } catch { throw new Error("Không thể kết nối máy chủ. Vui lòng thử lại."); }
+    } catch { throw new Error(`Không thể kết nối máy chủ (${base}). Kiểm tra backend và EXPO_PUBLIC_API_URL.`); }
     if (!response.ok) throw new Error(response.status === 401 ? "Email hoặc mật khẩu không đúng hoặc phiên đã hết hạn." : "Không thể hoàn tất yêu cầu. Vui lòng kiểm tra thông tin và thử lại.");
     return response.status === 204 ? undefined as T : await response.json() as T;
   } finally { clearTimeout(timer); }
