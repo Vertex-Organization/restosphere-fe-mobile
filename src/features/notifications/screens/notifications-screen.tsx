@@ -8,7 +8,7 @@ import { useApp } from "@/store/app-store";
 
 const KIND_CATEGORY: Record<string, string> = {
   TABLE_READY: "Bàn sẵn sàng", TABLE_REASSIGNED: "Đổi bàn", NEW_WEB_RESERVATION: "Đặt bàn từ website", REQUEST_DECIDED: "Kết quả yêu cầu",
-  RESERVATION_CANCELLED: "Khách hủy lịch", AUTO_NO_SHOW: "Khách không đến",
+  RESERVATION_CANCELLED: "Khách hủy lịch", AUTO_NO_SHOW: "Khách không đến", HOLD_EXPIRED: "Hết giờ giữ bàn",
 };
 
 export default function NotificationsScreen() {

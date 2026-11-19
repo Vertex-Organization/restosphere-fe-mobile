@@ -15,6 +15,7 @@ import { dateTimeLabel } from "@/utils/dates";
 import { ReservationListItem } from "../components/reservation-list-item";
 import {
   canCheckIn,
+  getAvailableTables,
   isTableAvailableForTimeRange,
   matchesReservation,
 } from "../rules";
@@ -95,6 +96,9 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
     : undefined;
   const needsTable =
     !table || !availability?.ok || table.status !== "AVAILABLE";
+  // Without a fitting free table now, the party can only be seated by splitting it or asking the manager.
+  const noFittingTable = !badCount && needsTable && !getAvailableTables(state, { ...r, startsAt: now.toISOString(), guests: actualCount }, r.id, now)
+    .some((t) => t.status === "AVAILABLE");
   return (
     <Screen>
       <Text style={ui.heading}>
@@ -130,6 +134,12 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
         <Message>
           {availability.reason} Có thể ghi nhận khách đã đến, sau đó chọn bàn
           khác trước khi bàn giao.
+        </Message>
+      )}
+      {noFittingTable && (
+        <Message>
+          Hiện không còn bàn trống nào đủ chỗ cho {actualCount} khách trong khu này. Hãy chờ bàn trống,
+          đổi khu hoặc nhờ quản lý duyệt ở màn chi tiết lịch đặt.
         </Message>
       )}
       {!!error && <Message>{error}</Message>}
