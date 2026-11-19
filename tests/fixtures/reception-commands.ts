@@ -141,7 +141,7 @@ export function executeCommand(
   if (!r) throw new Error("Không tìm thấy lịch đặt.");
   const action = command.type === "edit" ? "edit" : command.type;
   if (!getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(action)) {
-    if (command.type === "check-in") assertRule(canCheckIn(r, now));
+    if (command.type === "check-in") assertRule(canCheckIn(r));
     if (command.type === "no-show") assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
     throw new Error("Thao tác không được phép ở trạng thái hiện tại.");
   }
@@ -245,7 +245,7 @@ export function executeCommand(
       break;
     }
     case "check-in":
-      assertRule(canCheckIn(r, now));
+      assertRule(canCheckIn(r));
       if (!Number.isInteger(command.actualGuests) || command.actualGuests < 1)
         throw new Error("Số khách thực tế phải là số nguyên lớn hơn 0.");
       r.status = "ARRIVED";

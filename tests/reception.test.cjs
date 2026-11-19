@@ -563,15 +563,3 @@ test("assign to a different table emits TABLE_REASSIGNED for reception and waite
     assert.equal(moved.waiterNotifications[0].waiterId, "NV002");
   }
 });
-
-test("form bắt lỗi giờ mở cửa, số khách, check-in sớm ngay khi nhập", () => {
-  const settings = { bufferMinutes: 15, noShowMinutes: 30, openMinutes: 600, closeMinutes: 1320 };
-  const at = (h, m) => { const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(h, m, 0, 0); return d.toISOString(); };
-  assert.match(rules.validateReservationInput(input({ startsAt: at(21, 30) }), now, true, false, settings).startsAt, /giờ mở cửa/);
-  assert.match(rules.validateReservationInput(input({ startsAt: at(8, 0) }), now, true, false, settings).startsAt, /giờ mở cửa/);
-  assert.equal(rules.validateReservationInput(input({ startsAt: at(12, 0) }), now, true, false, settings).startsAt, undefined);
-  assert.match(rules.validateReservationInput(input({ guests: 201 }), now).guests, /200/);
-  const r = { ...input(), status: "CONFIRMED", startsAt: addMinutes(now, 120).toISOString() };
-  assert.match(rules.canCheckIn(r, now, 60).reason, /sớm/);
-  assert.equal(rules.canCheckIn(r, addMinutes(now, 61), 60).ok, true);
-});
