@@ -21,6 +21,7 @@ import {
   getReservationActions,
 } from "../rules";
 import type { ReservationAction } from "../types";
+import { tableCode } from "@/features/tables/labels";
 const ACTION_LABELS: Record<ReservationAction, string> = {
   confirm: "Xác nhận",
   reject: "Từ chối",
@@ -217,7 +218,7 @@ export default function ReservationDetailScreen() {
           requireReason={dialog !== "confirm"}
           message={
             dialog === "confirm"
-              ? `Xác nhận ${r.code} và giữ bàn ${candidate ?? "phù hợp"}?`
+              ? `Xác nhận ${r.code} và giữ bàn ${candidate ? tableCode(state.tables, candidate) : "phù hợp"}?`
               : `${ACTION_LABELS[dialog]} ${r.code}? Phần giữ bàn sẽ được giải phóng.`
           }
           onCancel={() => setDialog(null)}

@@ -7,9 +7,10 @@ import { lateMinutes, timeLabel } from "@/utils/dates";
 import { STATUS_LABELS } from "../labels";
 import type { Reservation } from "../types";
 import { StatusBadge, statusTone } from "./status-badge";
+import { tableCode } from "@/features/tables/labels";
 
 export function ReservationListItem({ reservation: r, onPress, trailing }: { reservation: Reservation; onPress?(): void; trailing?: React.ReactNode }) {
-  const { now } = useApp();
+  const { state, now } = useApp();
   const late = r.status === "CONFIRMED" ? lateMinutes(r, now) : 0;
   const tone = statusTone(r.status);
   return (
@@ -32,7 +33,7 @@ export function ReservationListItem({ reservation: r, onPress, trailing }: { res
               <AppIcon name="people-outline" size={14} color={colors.muted} />
               <Text style={ui.caption}>{r.actualGuests ?? r.guests} khách</Text>
               <Text style={ui.caption}>·</Text>
-              <Text style={ui.caption}>{r.tableId ? `Bàn ${r.tableId}` : "Chưa gán bàn"}</Text>
+              <Text style={ui.caption}>{r.tableId ? `Bàn ${tableCode(state.tables, r.tableId)}` : "Chưa gán bàn"}</Text>
             </View>
           </View>
         </View>

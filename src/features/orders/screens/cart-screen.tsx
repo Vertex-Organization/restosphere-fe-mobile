@@ -8,6 +8,7 @@ import { FoodThumbnail } from "@/features/menu/components/food-thumbnail";
 import { colors, radius } from "@/theme";
 import { canOrder, money, sessionDrafts } from "@/features/waiter/selectors";
 import { AmountRow, MissingSession, SessionHeading, openServiceScreen, useServiceSession, useWaiterAction } from "@/features/waiter/components/service-ui";
+import { tableCode } from "@/features/tables/labels";
 
 function DraftNote({ note, name, editable, save }: { note: string; name: string; editable: boolean; save(note: string): Promise<void> }) {
   const [text, setText] = useState(note);
@@ -45,6 +46,6 @@ export default function CartScreen() {
     <AmountRow label="Tạm tính lượt này" amount={total} />
     <Button title="Gửi xuống bếp" icon="send-outline" disabled={!editable || !drafts.length || unavailable} onPress={() => setConfirm(true)} />
     {editable && <Button title="Chọn thêm món" variant="secondary" onPress={() => openServiceScreen("menu", session)} />}
-    {confirm && <ConfirmDialog title="Gửi lượt gọi món" message={`Gửi ${drafts.reduce((n, d) => n + d.quantity, 0)} phần cho bàn ${session.tableId}? Món đã gửi sẽ không thể sửa trực tiếp.`} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); act({ type: "submit", sessionId: session.id }, () => router.replace({ pathname: "/waiter/progress", params: { sessionId: session.id } })); }} />}
+    {confirm && <ConfirmDialog title="Gửi lượt gọi món" message={`Gửi ${drafts.reduce((n, d) => n + d.quantity, 0)} phần cho bàn ${tableCode(state.tables, session.tableId)}? Món đã gửi sẽ không thể sửa trực tiếp.`} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); act({ type: "submit", sessionId: session.id }, () => router.replace({ pathname: "/waiter/progress", params: { sessionId: session.id } })); }} />}
   </Screen>;
 }

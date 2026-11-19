@@ -23,6 +23,7 @@ import {
   validateReservationInput,
 } from "../rules";
 import type { Reservation, ReservationInput } from "../types";
+import { tableCode } from "@/features/tables/labels";
 
 export default function ReservationFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -248,7 +249,7 @@ function ReservationForm({
               ? [
                   {
                     value: tableId,
-                    label: `${tableId} · Không còn phù hợp, cần chọn lại`,
+                    label: `${tableCode(state.tables, tableId)} · Không còn phù hợp, cần chọn lại`,
                   },
                 ]
               : []),

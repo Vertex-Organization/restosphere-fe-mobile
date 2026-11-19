@@ -19,7 +19,7 @@ export function StaffProfile({ staff, children }: { staff: Staff; children?: Rea
           <View style={{ flex: 1, gap: 4 }}>
             <Text accessibilityRole="header" style={ui.heading}>{staff.name}</Text>
             <Text style={[ui.label, { color: colors.primary }]}>{ROLE_LABELS[staff.role]}</Text>
-            <Text style={ui.caption}>Mã nhân viên · {staff.id}</Text>
+            <Text style={ui.caption}>Tài khoản · {staff.username}</Text>
           </View>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

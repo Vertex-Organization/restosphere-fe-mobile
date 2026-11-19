@@ -13,6 +13,7 @@ import {
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { canHandover } from "../rules";
+import { tableCode } from "@/features/tables/labels";
 export default function HandoverScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, now, run } = useApp();
@@ -71,7 +72,7 @@ export default function HandoverScreen() {
       {confirm && (
         <ConfirmDialog
           title="Bàn giao cho phục vụ"
-          message={`${r.actualGuests} khách nhận bàn ${r.tableId}. Sau bàn giao, lễ tân chỉ được xem lượt phục vụ.`}
+          message={`${r.actualGuests} khách nhận bàn ${tableCode(state.tables, r.tableId)}. Sau bàn giao, lễ tân chỉ được xem lượt phục vụ.`}
           onCancel={() => setConfirm(false)}
           onConfirm={async () => {
             try {
