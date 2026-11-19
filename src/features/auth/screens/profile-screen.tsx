@@ -19,7 +19,7 @@ export default function ProfileScreen() {
       </StaffProfile>
       <DeviceDataNote />
       <Button title="Đăng xuất" icon="log-out-outline" variant="danger" onPress={() => setConfirm(true)} />
-      {confirm && <ConfirmDialog title="Đăng xuất" message="Kết thúc phiên làm việc trên thiết bị này? Dữ liệu nghiệp vụ demo vẫn được giữ."
+      {confirm && <ConfirmDialog title="Đăng xuất" message="Kết thúc phiên làm việc trên thiết bị này? Dữ liệu nghiệp vụ vẫn được giữ trên máy chủ."
         onCancel={() => setConfirm(false)} onConfirm={() => { void signOut(); }} />}
     </Screen>
   );

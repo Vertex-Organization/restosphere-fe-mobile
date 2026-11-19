@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { Screen } from "@/components/layout/screen";
 import { Button, ConfirmDialog, EmptyState, Field, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { FoodThumbnail } from "@/features/menu/components/food-thumbnail";
 import { colors, radius } from "@/theme";
 import { canOrder, money, sessionDrafts } from "@/features/waiter/selectors";
@@ -45,6 +46,6 @@ export default function CartScreen() {
     <AmountRow label="Tạm tính lượt này" amount={total} />
     <Button title="Gửi xuống bếp" icon="send-outline" disabled={!editable || !drafts.length || unavailable} onPress={() => setConfirm(true)} />
     {editable && <Button title="Chọn thêm món" variant="secondary" onPress={() => openServiceScreen("menu", session)} />}
-    {confirm && <ConfirmDialog title="Gửi lượt gọi món" message={`Gửi ${drafts.reduce((n, d) => n + d.quantity, 0)} phần cho bàn ${session.tableId}? Món đã gửi sẽ không thể sửa trực tiếp.`} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); act({ type: "submit", sessionId: session.id }, () => router.replace({ pathname: "/waiter/progress", params: { sessionId: session.id } })); }} />}
+    {confirm && <ConfirmDialog title="Gửi lượt gọi món" message={`Gửi ${drafts.reduce((n, d) => n + d.quantity, 0)} phần cho bàn ${tableCode(state.tables, session.tableId)}? Món đã gửi sẽ không thể sửa trực tiếp.`} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); act({ type: "submit", sessionId: session.id }, () => router.replace({ pathname: "/waiter/progress", params: { sessionId: session.id } })); }} />}
   </Screen>;
 }

@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
 import { Button, ConfirmDialog, EmptyState, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { PAYMENT_LABELS } from "@/features/orders/labels";
 import { canOrder, paymentBlockReason, sessionBill, sessionDrafts, sessionItems, sessionTotal } from "@/features/waiter/selectors";
 import { AmountRow, ItemRow, MissingSession, SessionHeading, StatusTag, openServiceScreen, useServiceSession, useWaiterAction } from "@/features/waiter/components/service-ui";
@@ -44,7 +45,7 @@ export default function PaymentScreen() {
       </>
     )}
     {bill.status === "PAID" && <><Message kind="success">Thu ngân đã xác nhận lúc {dateTimeLabel(bill.paidAt!)}. {session.guestLeftAt ? "Đã ghi nhận khách rời bàn." : "Bàn vẫn có khách cho đến khi bạn xác nhận khách đã rời."}</Message><Button title="Mở kết thúc phục vụ" onPress={() => openServiceScreen("finish", session)} /></>}
-    {confirm && <ConfirmDialog title="Yêu cầu thanh toán" message={`Gửi tổng tạm tính cho bàn ${session.tableId} đến thu ngân? Thao tác gọi thêm món sẽ bị khóa.`} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); act({ type: "request-payment", sessionId: session.id }); }} />}
-    {withdrawing && <ConfirmDialog title="Rút yêu cầu thanh toán" message={`Rút lại yêu cầu thanh toán cho bàn ${session.tableId}? Bàn sẽ mở lại để gọi thêm món.`} onCancel={() => setWithdrawing(false)} onConfirm={() => { setWithdrawing(false); act({ type: "withdraw-payment-request", sessionId: session.id }); }} />}
+    {confirm && <ConfirmDialog title="Yêu cầu thanh toán" message={`Gửi tổng tạm tính cho bàn ${tableCode(state.tables, session.tableId)} đến thu ngân? Thao tác gọi thêm món sẽ bị khóa.`} onCancel={() => setConfirm(false)} onConfirm={() => { setConfirm(false); act({ type: "request-payment", sessionId: session.id }); }} />}
+    {withdrawing && <ConfirmDialog title="Rút yêu cầu thanh toán" message={`Rút lại yêu cầu thanh toán cho bàn ${tableCode(state.tables, session.tableId)}? Bàn sẽ mở lại để gọi thêm món.`} onCancel={() => setWithdrawing(false)} onConfirm={() => { setWithdrawing(false); act({ type: "withdraw-payment-request", sessionId: session.id }); }} />}
   </Screen>;
 }

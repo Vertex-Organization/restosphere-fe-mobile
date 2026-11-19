@@ -71,7 +71,7 @@ export default function HandoverScreen() {
       {confirm && (
         <ConfirmDialog
           title="Bàn giao cho phục vụ"
-          message={`${r.actualGuests} khách nhận bàn ${r.tableId}. Sau bàn giao, lễ tân chỉ được xem lượt phục vụ.`}
+          message={`${r.actualGuests} khách nhận bàn ${table?.code ?? "—"}. Sau bàn giao, lễ tân chỉ được xem lượt phục vụ.`}
           onCancel={() => setConfirm(false)}
           onConfirm={async () => {
             try {

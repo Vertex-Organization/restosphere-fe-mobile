@@ -45,7 +45,7 @@ export default function ReservationDetailScreen() {
       <Screen>
         <EmptyState
           title="Không tìm thấy lịch đặt"
-          description="Lịch này không còn trong dữ liệu demo hiện tại."
+          description="Lịch này không còn tồn tại hoặc đã bị xóa."
         />
       </Screen>
     );
@@ -57,7 +57,7 @@ export default function ReservationDetailScreen() {
     : r.status === "ARRIVED" ? (table ? "handover" : "assign") : undefined;
   const primaryAction = nextAction && actions.includes(nextAction) ? nextAction : undefined;
   const otherActions = actions.filter((action) => action !== primaryAction);
-  const candidate = r.tableId ?? getAvailableTables(state, r, r.id, now)[0]?.id;
+  const candidate = r.tableId ? table?.code : getAvailableTables(state, r, r.id, now)[0]?.code;
   function act(action: ReservationAction) {
     setError("");
     if (action === "confirm") {

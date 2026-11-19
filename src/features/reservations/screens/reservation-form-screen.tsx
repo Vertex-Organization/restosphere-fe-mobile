@@ -259,7 +259,7 @@ function ReservationForm({
               ? [
                   {
                     value: tableId,
-                    label: `${tableId} · Không còn phù hợp, cần chọn lại`,
+                    label: `${selected?.code ?? "Bàn cũ"} · Không còn phù hợp, cần chọn lại`,
                   },
                 ]
               : []),

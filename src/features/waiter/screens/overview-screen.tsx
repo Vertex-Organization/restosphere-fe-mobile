@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
 import { AppIcon, Button, EmptyState, Section, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { colors, radius } from "@/theme";
 import { timeLabel } from "@/utils/dates";
 import { FoodThumbnail } from "@/features/menu/components/food-thumbnail";
@@ -56,10 +57,10 @@ export default function WaiterOverviewScreen() {
         {ready.slice(0, 3).map((item, index) => {
           const order = state.orders.find((o) => o.id === item.orderId)!;
           const session = mine.find((s) => s.id === order.sessionId)!;
-          return <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Mở món sẵn sàng, ${item.quantity} ${item.name}, bàn ${session.tableId}`} onPress={() => router.navigate("/waiter/ready")}
+          return <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Mở món sẵn sàng, ${item.quantity} ${item.name}, bàn ${tableCode(state.tables, session.tableId)}`} onPress={() => router.navigate("/waiter/ready")}
             style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", padding: 12, gap: 12, borderTopWidth: index ? 1 : 0, borderTopColor: colors.border, backgroundColor: pressed ? colors.surface : colors.white })}>
             <FoodThumbnail itemId={item.menuItemId} name={item.name} size={48} />
-            <View style={{ flex: 1, gap: 3 }}><Text style={[ui.label, { fontWeight: "600" }]}>{item.quantity} × {item.name}</Text><Text style={[ui.caption, { color: colors.success }]}>Bàn {session.tableId} · Bếp xong {item.readyAt ? timeLabel(item.readyAt) : ""}</Text></View>
+            <View style={{ flex: 1, gap: 3 }}><Text style={[ui.label, { fontWeight: "600" }]}>{item.quantity} × {item.name}</Text><Text style={[ui.caption, { color: colors.success }]}>Bàn {tableCode(state.tables, session.tableId)} · Bếp xong {item.readyAt ? timeLabel(item.readyAt) : ""}</Text></View>
             <AppIcon name="chevron-forward" size={17} color={colors.muted} />
           </Pressable>;
         })}
@@ -73,9 +74,9 @@ export default function WaiterOverviewScreen() {
     </Section>
 
     {!!payment.length && <Section title={`Bàn chờ thanh toán (${payment.length})`}>
-      <View style={{ backgroundColor: colors.white, borderRadius: radius.control, borderCurve: "continuous", overflow: "hidden" }}>{payment.map((session, index) => <Pressable key={session.id} accessibilityRole="button" accessibilityLabel={`Xem thanh toán bàn ${session.tableId}`} onPress={() => openServiceScreen("payment", session)}
+      <View style={{ backgroundColor: colors.white, borderRadius: radius.control, borderCurve: "continuous", overflow: "hidden" }}>{payment.map((session, index) => <Pressable key={session.id} accessibilityRole="button" accessibilityLabel={`Xem thanh toán bàn ${tableCode(state.tables, session.tableId)}`} onPress={() => openServiceScreen("payment", session)}
         style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, minHeight: 64, borderTopWidth: index ? 1 : 0, borderTopColor: colors.border, backgroundColor: pressed ? colors.surface : colors.white })}>
-        <AppIcon name="receipt-outline" size={22} color={colors.warning} /><View style={{ flex: 1, gap: 3 }}><Text style={ui.label}>Bàn {session.tableId}</Text><Text style={ui.caption}>Đang chờ thu ngân xử lý</Text></View><AppIcon name="chevron-forward" size={17} color={colors.muted} />
+        <AppIcon name="receipt-outline" size={22} color={colors.warning} /><View style={{ flex: 1, gap: 3 }}><Text style={ui.label}>Bàn {tableCode(state.tables, session.tableId)}</Text><Text style={ui.caption}>Đang chờ thu ngân xử lý</Text></View><AppIcon name="chevron-forward" size={17} color={colors.muted} />
       </Pressable>)}</View>
     </Section>}
 

@@ -22,7 +22,7 @@ export default function DashboardScreen() {
     { title: "Khách sắp đến", data: today.filter((r) => r.status === "CONFIRMED" && new Date(r.startsAt) >= now && new Date(r.startsAt).getTime() <= now.getTime() + 120 * 60_000) },
     { title: "Khách đến trễ", data: today.filter((r) => r.status === "CONFIRMED" && new Date(r.startsAt) < now) },
   ].filter((section) => section.data.length > 0);
-  const candidate = confirm && (confirm.tableId ?? getAvailableTables(state, confirm, confirm.id, now)[0]?.id);
+  const candidate = confirm && (confirm.tableId ? state.tables.find((t) => t.id === confirm.tableId)?.code : getAvailableTables(state, confirm, confirm.id, now)[0]?.code);
   const metrics = [
     { value: summary.pending, label: "Cần xác nhận", color: colors.warning, icon: "time-outline" as const },
     { value: summary.upcoming, label: "Sắp đến", color: colors.info, icon: "calendar-outline" as const },
@@ -103,7 +103,7 @@ export default function DashboardScreen() {
         )}
         ListEmptyComponent={<EmptyState title="Đã xử lý hết công việc" description="Các lịch cần xác nhận, đón khách và bàn giao sẽ hiển thị tại đây." />}
       />
-      {confirm && <ConfirmDialog title="Xác nhận đặt bàn" message={`Xác nhận ${confirm.code} và giữ bàn ${candidate ?? "phù hợp"}. Chính sách demo tự giữ một bàn để tránh nhận quá khả năng.`}
+      {confirm && <ConfirmDialog title="Xác nhận đặt bàn" message={`Xác nhận ${confirm.code} và giữ bàn ${candidate ?? "phù hợp"}. Hệ thống tự giữ một bàn để tránh nhận quá khả năng.`}
         onCancel={() => setConfirm(null)} onConfirm={async () => {
           try { await run({ type: "confirm", id: confirm.id }); setConfirm(null); }
           catch (e) { setError((e as Error).message); setConfirm(null); }

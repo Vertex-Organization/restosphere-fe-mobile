@@ -10,6 +10,7 @@ import {
   ui,
 } from "@/components/ui";
 import { TableItem } from "@/features/tables/components/table-item";
+import { tableCode } from "@/features/tables/labels";
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { canAssignTable, getReservationActions } from "../rules";
@@ -53,7 +54,7 @@ export default function AssignTableScreen() {
               {dateTimeLabel(r.arrivedAt ?? r.startsAt)} · {r.duration} phút
             </Text>
             <Text style={ui.muted}>
-              Bàn hiện tại: {r.tableId ?? "Chưa gán"}. Không hỗ trợ ghép bàn.
+              Bàn hiện tại: {r.tableId ? tableCode(state.tables, r.tableId) : "Chưa gán"}. Không hỗ trợ ghép bàn.
             </Text>
             {!!error && <Message>{error}</Message>}
             {!checks.some((item) => item.check.ok) && (
@@ -63,7 +64,7 @@ export default function AssignTableScreen() {
             )}
             <Button
               title={
-                selected ? `Xác nhận bàn ${selected}` : "Chọn bàn bên dưới"
+                selected ? `Xác nhận bàn ${tableCode(state.tables, selected)}` : "Chọn bàn bên dưới"
               }
               disabled={!validSelected}
               onPress={() => setConfirm(true)}
@@ -91,7 +92,7 @@ export default function AssignTableScreen() {
       {confirm && (
         <ConfirmDialog
           title={r.tableId ? "Xác nhận đổi bàn" : "Xác nhận gán bàn"}
-          message={`Bàn cũ: ${r.tableId ?? "Chưa có"} → bàn mới: ${selected}. Kiểm tra lại xung đột trước khi lưu.`}
+          message={`Bàn cũ: ${r.tableId ? tableCode(state.tables, r.tableId) : "Chưa có"} → bàn mới: ${tableCode(state.tables, selected)}. Kiểm tra lại xung đột trước khi lưu.`}
           onCancel={() => setConfirm(false)}
           onConfirm={async () => {
             try {
