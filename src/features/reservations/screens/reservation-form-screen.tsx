@@ -89,6 +89,15 @@ function ReservationForm({
     ? isTableAvailableForTimeRange(state, selected, input, r?.id, now)
     : undefined;
   const invalidSelected = !!tableId && !available.some((t) => t.id === tableId);
+  const live = validateReservationInput(
+    { ...input, preorder: undefined },
+    now,
+    !r || r.startsAt !== input.startsAt,
+    walkIn,
+    state.settings,
+  );
+  const liveError = (key: "guests" | "duration" | "startsAt") => errors[key] ?? live[key];
+  const blocked = !!(live.guests || live.duration || live.startsAt);
   async function save() {
     const actualInput = {
       ...input,
@@ -100,6 +109,7 @@ function ReservationForm({
       new Date(),
       !r || r.startsAt !== actualInput.startsAt,
       walkIn,
+      state.settings,
     );
     setErrors(validation);
     setError("");
@@ -161,22 +171,22 @@ function ReservationForm({
           value={guests}
           onChangeText={setGuests}
           keyboardType="number-pad"
-          error={errors.guests}
+          error={liveError("guests")}
         />
       </Section>
       {!walkIn && (
         <Section title="Thời gian">
           <DateField label="Ngày đặt *" value={date} onChange={setDate} />
           <DateField label="Giờ đến *" mode="time" value={date} onChange={setDate} />
-          {errors.startsAt && <Message>{errors.startsAt}</Message>}
         </Section>
       )}
+      {liveError("startsAt") && <Message>{liveError("startsAt")}</Message>}
       <Field
         label="Thời lượng dự kiến (phút) *"
         value={duration}
         onChangeText={setDuration}
         keyboardType="number-pad"
-        error={errors.duration}
+        error={liveError("duration")}
       />
       <Select
         label="Khu vực *"
@@ -271,7 +281,7 @@ function ReservationForm({
       )}
       <Button
         title={walkIn ? "Xác nhận khách đã đến · Tiếp tục" : "Lưu đặt bàn"}
-        disabled={walkIn ? !tableId || invalidSelected : invalidSelected}
+        disabled={blocked || (walkIn ? !tableId || invalidSelected : invalidSelected)}
         onPress={save}
       />
       <Button

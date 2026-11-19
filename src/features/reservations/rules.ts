@@ -138,14 +138,27 @@ export function canConfirmReservation(
   // reserve one fitting table when confirming so capacity cannot be oversold.
   return yes;
 }
-export function canCheckIn(r: Reservation): RuleResult {
-  return r.status === "CONFIRMED"
-    ? yes
-    : no(
-        r.arrivedAt
-          ? "Khách đã được check-in trước đó."
-          : "Chỉ check-in lịch đã xác nhận.",
-      );
+export function canCheckIn(r: Reservation, now = new Date(), earlyMinutes = 60): RuleResult {
+  if (r.status !== "CONFIRMED")
+    return no(
+      r.arrivedAt
+        ? "Khách đã được check-in trước đó."
+        : "Chỉ check-in lịch đã xác nhận.",
+    );
+  return now < addMinutes(r.startsAt, -earlyMinutes)
+    ? no(`Chỉ check-in sớm tối đa ${earlyMinutes} phút trước giờ hẹn.`)
+    : yes;
+}
+const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+// Uses device local time; the server re-checks with the restaurant timezone.
+export function openingHoursError(startsAt: string, duration: number, settings?: ReservationSettings, walkIn = false): string | undefined {
+  const open = settings?.openMinutes, close = settings?.closeMinutes;
+  if (open == null || close == null) return;
+  const d = new Date(startsAt);
+  let m = d.getHours() * 60 + d.getMinutes();
+  if (m < open && close > 1440) m += 1440;
+  if (m < open || (walkIn ? m + 1 : m + duration) > close)
+    return `Nhà hàng mở ${hhmm(open)}–${hhmm(close)}; giờ đến + thời lượng phải nằm trong giờ mở cửa.`;
 }
 export function canHandover(
   state: ReceptionState,
@@ -203,6 +216,7 @@ export function validateReservationInput(
   now: Date,
   isNew = true,
   walkIn = false,
+  settings?: ReservationSettings,
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (input.email !== undefined && (typeof input.email !== "string" || (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)))) errors.email = "Email không hợp lệ.";
@@ -216,6 +230,7 @@ export function validateReservationInput(
     errors.phone = "Nhập số điện thoại Việt Nam hợp lệ (0 hoặc +84).";
   if (!Number.isInteger(input.guests) || input.guests < 1)
     errors.guests = "Số khách phải là số nguyên lớn hơn 0.";
+  else if (input.guests > 200) errors.guests = "Tối đa 200 khách mỗi lịch.";
   if (
     !Number.isInteger(input.duration) ||
     input.duration < 15 ||
@@ -226,6 +241,12 @@ export function validateReservationInput(
     errors.startsAt = "Ngày giờ không hợp lệ.";
   else if (isNew && !walkIn && new Date(input.startsAt) < now)
     errors.startsAt = "Không tạo lịch mới trong quá khứ.";
+  else if (isNew && new Date(input.startsAt) > addMinutes(now, 365 * 1440))
+    errors.startsAt = "Chỉ đặt trước tối đa 365 ngày.";
+  else {
+    const hours = openingHoursError(input.startsAt, errors.duration ? 0 : input.duration, settings, walkIn);
+    if (hours) errors.startsAt = hours;
+  }
   return errors;
 }
 export function matchesReservation(r: Reservation, query: string): boolean {
