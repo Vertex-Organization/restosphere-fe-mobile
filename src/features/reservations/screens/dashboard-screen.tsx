@@ -23,7 +23,7 @@ export default function DashboardScreen() {
     { title: "Khách sắp đến", data: today.filter((r) => r.status === "CONFIRMED" && new Date(r.startsAt) >= now && new Date(r.startsAt).getTime() <= now.getTime() + 120 * 60_000) },
     { title: "Khách đến trễ", data: today.filter((r) => r.status === "CONFIRMED" && new Date(r.startsAt) < now) },
   ].filter((section) => section.data.length > 0);
-  const candidate = confirm && (confirm.tableId ?? getAvailableTables(state, confirm, confirm.id, now)[0]?.id);
+  const candidate = confirm && (confirm.tableId ? state.tables.find((t) => t.id === confirm.tableId)?.code : getAvailableTables(state, confirm, confirm.id, now)[0]?.code);
   const metrics = [
     { value: summary.pending, label: "Cần xác nhận", color: colors.warning, icon: "time-outline" as const },
     { value: summary.upcoming, label: "Sắp đến", color: colors.info, icon: "calendar-outline" as const },
@@ -32,7 +32,7 @@ export default function DashboardScreen() {
   ];
   const quickActions: { title: string; subtitle: string; icon: IconName; onPress(): void }[] = [
     { title: "Tạo đặt bàn", subtitle: "Thêm lịch hẹn mới", icon: "add-outline", onPress: () => router.push("/reception/reservations/form") },
-    { title: "Đón khách", subtitle: "Tìm lịch & check-in", icon: "scan-outline", onPress: () => router.push("/reception/check-in") },
+    { title: "Đón khách", subtitle: "Tìm lịch & nhận khách", icon: "scan-outline", onPress: () => router.push("/reception/check-in") },
     { title: "Khách trực tiếp", subtitle: "Tiếp nhận tại quầy", icon: "people-outline", onPress: () => router.push("/reception/walk-in") },
     { title: "Xem bàn trống", subtitle: "Chọn bàn sẵn sàng", icon: "restaurant-outline", onPress: () => router.push("/reception/tables?status=AVAILABLE") },
   ];
@@ -99,12 +99,12 @@ export default function DashboardScreen() {
               const check = canConfirmReservation(state, r, new Date());
               if (!check.ok) setError(check.reason);
               else { setError(""); setConfirm(r); }
-            }} /> : r.status === "CONFIRMED" ? <Button title="Check-in khách" icon="scan-outline" variant="secondary" onPress={() => router.push(`/reception/check-in?id=${r.id}`)} /> : <Button title="Tiếp tục bàn giao" variant="secondary" onPress={() => router.push(`/reception/handover?id=${r.id}`)} />
+            }} /> : r.status === "CONFIRMED" ? <Button title="Nhận khách" icon="scan-outline" variant="secondary" onPress={() => router.push(`/reception/check-in?id=${r.id}`)} /> : <Button title="Tiếp tục bàn giao" variant="secondary" onPress={() => router.push(`/reception/handover?id=${r.id}`)} />
           } />
         )}
         ListEmptyComponent={<EmptyState title="Đã xử lý hết công việc" description="Các lịch cần xác nhận, đón khách và bàn giao sẽ hiển thị tại đây." />}
       />
-      {confirm && <ConfirmDialog title="Xác nhận đặt bàn" message={`Xác nhận ${confirm.code} và giữ bàn ${candidate ? tableCode(state.tables, candidate) : "phù hợp"}. Chính sách demo tự giữ một bàn để tránh nhận quá khả năng.`}
+      {confirm && <ConfirmDialog title="Xác nhận đặt bàn" message={`Xác nhận ${confirm.code} và giữ bàn ${candidate ?? "phù hợp"} cho khách?`}
         onCancel={() => setConfirm(null)} onConfirm={async () => {
           try { await run({ type: "confirm", id: confirm.id }); setConfirm(null); }
           catch (e) { setError((e as Error).message); setConfirm(null); }

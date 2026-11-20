@@ -14,7 +14,7 @@ export function Loading() {
       }}
     >
       <ActivityIndicator color={colors.primary} />
-      <Text style={ui.text}>Đang tải dữ liệu demo…</Text>
+      <Text style={ui.text}>Đang tải dữ liệu…</Text>
     </View>
   );
 }

@@ -13,8 +13,8 @@ import {
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { ReservationListItem } from "../components/reservation-list-item";
-import {
   canCheckIn,
+  getAvailableTables,
   isTableAvailableForTimeRange,
   matchesReservation,
 } from "../rules";
@@ -48,7 +48,7 @@ export default function CheckInScreen() {
           <View style={{ marginBottom: 12, gap: 10 }}>
             <SearchInput value={query} onChangeText={setQuery} />
             <Text style={ui.muted}>
-              Chỉ hiển thị lịch đã xác nhận. Ngày giờ được ghi ở từng lịch.
+              Chỉ hiển thị lịch đã xác nhận. Tìm theo tên, số điện thoại hoặc mã đặt bàn.
             </Text>
           </View>
         }
@@ -64,7 +64,7 @@ export default function CheckInScreen() {
         ListEmptyComponent={
           <EmptyState
             title="Không có lịch đã xác nhận phù hợp"
-            description="Kiểm tra thông tin tìm kiếm hoặc xác nhận lịch trước khi check-in."
+            description="Kiểm tra lại từ khóa tìm kiếm, hoặc xác nhận lịch trước khi nhận khách."
           />
         }
       />
@@ -75,9 +75,11 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
   const { state, now, run } = useApp();
   const [actual, setActual] = useState(String(r.guests));
   const [error, setError] = useState("");
-  const check = canCheckIn(r);
+  const check = canCheckIn(r, now, state.settings.earlyCheckInMinutes);
   const table = state.tables.find((t) => t.id === r.tableId);
-  const tooMany = table && Number(actual) > table.capacity;
+  const actualCount = Number(actual);
+  const badCount = !Number.isInteger(actualCount) || actualCount < 1 || actualCount > 200;
+  const tooMany = table && actualCount > table.capacity;
   const availability = table
     ? isTableAvailableForTimeRange(
         state,
@@ -93,6 +95,9 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
     : undefined;
   const needsTable =
     !table || !availability?.ok || table.status !== "AVAILABLE";
+  // Without a fitting free table now, the party can only be seated by splitting it or asking the manager.
+  const noFittingTable = !badCount && needsTable && !getAvailableTables(state, { ...r, startsAt: now.toISOString(), guests: actualCount }, r.id, now)
+    .some((t) => t.status === "AVAILABLE");
   return (
     <Screen>
       <Text style={ui.heading}>
@@ -111,6 +116,7 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
         value={actual}
         onChangeText={setActual}
         editable={check.ok}
+        error={badCount ? "Số khách thực tế từ 1 đến 200." : undefined}
       />
       {tooMany && (
         <Message>
@@ -120,7 +126,7 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
       )}
       {!table && (
         <Message kind="info">
-          Cần gán bàn sau check-in, trước khi bàn giao.
+          Lịch chưa có bàn. Hãy chọn bàn trước khi bàn giao cho phục vụ.
         </Message>
       )}
       {!tooMany && availability && !availability.ok && (
@@ -129,13 +135,19 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
           khác trước khi bàn giao.
         </Message>
       )}
+      {noFittingTable && (
+        <Message>
+          Hiện không còn bàn trống nào đủ chỗ cho {actualCount} khách trong khu này. Hãy chờ bàn trống,
+          đổi khu hoặc nhờ quản lý duyệt ở màn chi tiết lịch đặt.
+        </Message>
+      )}
       {!!error && <Message>{error}</Message>}
       <Message kind="info">
-        Check-in chỉ ghi nhận khách đã đến, chưa chuyển bàn sang đang sử dụng.
+        Bước này chỉ ghi nhận khách đã đến. Bàn chuyển sang “đang sử dụng” khi bàn giao cho phục vụ.
       </Message>
       <Button
         title="Xác nhận khách đã đến"
-        disabled={!check.ok}
+        disabled={!check.ok || badCount}
         onPress={async () => {
           try {
             await run({ type: "check-in", id: r.id, actualGuests: Number(actual) });

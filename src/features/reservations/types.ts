@@ -55,6 +55,9 @@ export interface TableAssignment {
 export interface ReservationSettings {
   bufferMinutes: number;
   noShowMinutes: number;
+  openMinutes?: number;
+  closeMinutes?: number;
+  earlyCheckInMinutes?: number;
 }
 export interface ReceptionState extends ServiceData {
   version: 1;

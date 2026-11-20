@@ -4,9 +4,9 @@ import { Screen } from "@/components/layout/screen";
 import { AppIcon, ConfirmDialog, EmptyState, Message, ui } from "@/components/ui";
 import { colors, radius } from "@/theme";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { sessionItems, visibleSessions } from "@/features/waiter/selectors";
 import { ItemRow, openTable, useWaiterAction } from "@/features/waiter/components/service-ui";
-import { tableCode } from "@/features/tables/labels";
 
 export default function ReadyScreen() {
   const { state } = useApp();

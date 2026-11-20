@@ -37,10 +37,10 @@ export function Screen({
       {!!storageError && (
         <View style={{ padding: 10, gap: 6 }}>
           <Message>{storageError}</Message>
-          <Button title="Tải lại từ máy chủ" onPress={retrySave} variant="secondary" />
+          <Button title="Tải lại" onPress={retrySave} variant="secondary" />
         </View>
       )}
-      {busy && <Message>Đang gửi thao tác tới máy chủ…</Message>}
+      {busy && <Message kind="info">Đang lưu…</Message>}
       {!!notice && !login && (
         <Pressable
           accessibilityRole="button"

@@ -3,11 +3,11 @@ import { Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
 import { Button, ConfirmDialog, EmptyState, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { PAYMENT_LABELS } from "@/features/orders/labels";
 import { canOrder, paymentBlockReason, sessionBill, sessionDrafts, sessionItems, sessionTotal } from "@/features/waiter/selectors";
 import { AmountRow, ItemRow, MissingSession, SessionHeading, StatusTag, openServiceScreen, useServiceSession, useWaiterAction } from "@/features/waiter/components/service-ui";
 import { dateTimeLabel } from "@/utils/dates";
-import { tableCode } from "@/features/tables/labels";
 
 export default function PaymentScreen() {
   const { state } = useApp();

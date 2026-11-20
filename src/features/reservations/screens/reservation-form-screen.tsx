@@ -16,7 +16,6 @@ import {
 import { TableItem } from "@/features/tables/components/table-item";
 import { useApp } from "@/store/app-store";
 import { addMinutes } from "@/utils/dates";
-import {
   getAvailableTables,
   getReservationActions,
   isTableAvailableForTimeRange,
@@ -37,7 +36,7 @@ export default function ReservationFormScreen() {
       <Screen>
         <EmptyState
           title="Không thể chỉnh sửa lịch này"
-          description="Chỉ sửa lịch đang chờ hoặc đã xác nhận, trước khi khách check-in."
+          description="Chỉ sửa lịch đang chờ hoặc đã xác nhận, trước khi khách đến."
         />
       </Screen>
     );
@@ -90,20 +89,31 @@ function ReservationForm({
     ? isTableAvailableForTimeRange(state, selected, input, r?.id, now)
     : undefined;
   const invalidSelected = !!tableId && !available.some((t) => t.id === tableId);
+  const live = validateReservationInput(
+    { ...input, preorder: undefined },
+    now,
+    !r || r.startsAt !== input.startsAt,
+    walkIn,
+    state.settings,
+  );
+  const liveError = (key: "guests" | "duration" | "startsAt") => errors[key] ?? live[key];
+  const blocked = !!(live.guests || live.duration || live.startsAt);
   async function save() {
     const actualInput = {
       ...input,
       startsAt: walkIn ? new Date().toISOString() : input.startsAt,
     };
     const validation = validateReservationInput(
-      actualInput,
+      // Preorder is not editable here and may hold web kg quantities (1.5); the server validates it.
+      { ...actualInput, preorder: undefined },
       new Date(),
       !r || r.startsAt !== actualInput.startsAt,
       walkIn,
+      state.settings,
     );
     setErrors(validation);
     setError("");
-    if (!name.trim() || !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s()-]/g, "")) || !areaId)
+    if ((!walkIn && !name.trim()) || !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s().-]/g, "")) || !areaId)
       return setError("Nhập tên khách, số điện thoại hợp lệ và chọn khu vực.");
     if (Object.keys(validation).length)
       return setError("Kiểm tra các trường được đánh dấu bên dưới.");
@@ -137,8 +147,8 @@ function ReservationForm({
       </Text>
       <Text style={ui.muted}>
         {walkIn
-            ? "Chọn bàn sẵn sàng, tạo lịch rồi xác nhận và check-in trước khi bàn giao."
-          : "Lưu lịch chưa đồng nghĩa đã xác nhận. Lịch chờ chưa giữ bàn."}
+            ? "Chọn bàn sẵn sàng. Khách được ghi nhận đã đến, sau đó bàn giao cho phục vụ."
+          : "Lịch mới ở trạng thái chờ xác nhận và chưa giữ bàn."}
       </Text>
       {!!error && <Message>{error}</Message>}
       <Section title="Thông tin khách">
@@ -161,22 +171,22 @@ function ReservationForm({
           value={guests}
           onChangeText={setGuests}
           keyboardType="number-pad"
-          error={errors.guests}
+          error={liveError("guests")}
         />
       </Section>
       {!walkIn && (
         <Section title="Thời gian">
           <DateField label="Ngày đặt *" value={date} onChange={setDate} />
           <DateField label="Giờ đến *" mode="time" value={date} onChange={setDate} />
-          {errors.startsAt && <Message>{errors.startsAt}</Message>}
         </Section>
       )}
+      {liveError("startsAt") && <Message>{liveError("startsAt")}</Message>}
       <Field
         label="Thời lượng dự kiến (phút) *"
         value={duration}
         onChangeText={setDuration}
         keyboardType="number-pad"
-        error={errors.duration}
+        error={liveError("duration")}
       />
       <Select
         label="Khu vực *"
@@ -249,7 +259,7 @@ function ReservationForm({
               ? [
                   {
                     value: tableId,
-                    label: `${tableCode(state.tables, tableId)} · Không còn phù hợp, cần chọn lại`,
+                    label: `${selected?.code ?? "Bàn cũ"} · Không còn phù hợp, cần chọn lại`,
                   },
                 ]
               : []),
@@ -271,7 +281,7 @@ function ReservationForm({
       )}
       <Button
         title={walkIn ? "Xác nhận khách đã đến · Tiếp tục" : "Lưu đặt bàn"}
-        disabled={walkIn ? !tableId || invalidSelected : invalidSelected}
+        disabled={blocked || (walkIn ? !tableId || invalidSelected : invalidSelected)}
         onPress={save}
       />
       <Button

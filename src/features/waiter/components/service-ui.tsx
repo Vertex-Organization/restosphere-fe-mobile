@@ -106,7 +106,7 @@ export function ItemRow({ item, onServe }: { item: OrderItem; onServe?: () => vo
     </View>
     {!!item.note && <Text style={ui.label}>Ghi chú: {item.note}</Text>}
     {!!item.rejectionReason && <Message>{item.rejectionReason}</Message>}
-    {request && <Text style={ui.caption}>{request.code} · {request.status === "PENDING" ? "Chờ duyệt" : request.status === "APPROVED" ? "Đã duyệt" : "Từ chối"}{request.decisionNote ? ` · ${request.decisionNote}` : ""}</Text>}
+    {request && <Text style={ui.caption}>Yêu cầu hủy · {request.status === "PENDING" ? "Chờ duyệt" : request.status === "APPROVED" ? "Đã duyệt" : "Từ chối"}{request.decisionNote ? ` · ${request.decisionNote}` : ""}</Text>}
     {!!error && <Message>{error}</Message>}
     {canCancel && (cancelling ? <View style={{ gap: 8 }}><Field label="Lý do hủy" multiline maxLength={200} value={reason} onChangeText={setReason} /><Button title="Gửi yêu cầu hủy" onPress={() => act({ type: "request-cancel", sessionId: session.id, itemId: item.id, reason }, () => { setCancelling(false); setReason(""); })} /><Button title="Quay lại" variant="secondary" onPress={() => setCancelling(false)} /></View> : <Button title="Yêu cầu hủy" variant="secondary" onPress={() => setCancelling(true)} />)}
     {!!item.cancellationReason && <Message>{item.cancellationReason}</Message>}

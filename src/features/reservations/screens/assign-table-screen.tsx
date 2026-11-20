@@ -10,10 +10,10 @@ import {
   ui,
 } from "@/components/ui";
 import { TableItem } from "@/features/tables/components/table-item";
+import { tableCode } from "@/features/tables/labels";
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { canAssignTable, getReservationActions } from "../rules";
-import { tableCode } from "@/features/tables/labels";
 export default function AssignTableScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, now, run } = useApp();
@@ -64,7 +64,7 @@ export default function AssignTableScreen() {
             )}
             <Button
               title={
-                selected ? `Xác nhận bàn ${selected}` : "Chọn bàn bên dưới"
+                selected ? `Xác nhận bàn ${tableCode(state.tables, selected)}` : "Chọn bàn bên dưới"
               }
               disabled={!validSelected}
               onPress={() => setConfirm(true)}

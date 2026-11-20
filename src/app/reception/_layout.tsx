@@ -27,7 +27,7 @@ export default function ReceptionLayout() {
         name="reservations/assign"
         options={{ title: "Gán / đổi bàn" }}
       />
-      <Stack.Screen name="check-in" options={{ title: "Check-in khách" }} />
+      <Stack.Screen name="check-in" options={{ title: "Nhận khách" }} />
       <Stack.Screen
         name="walk-in"
         options={{ title: "Tiếp nhận khách trực tiếp" }}

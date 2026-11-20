@@ -4,13 +4,13 @@ import { AppIcon, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
 import { colors, radius, typography } from "@/theme";
 import { lateMinutes, timeLabel } from "@/utils/dates";
+import { tableCode } from "@/features/tables/labels";
 import { STATUS_LABELS } from "../labels";
 import type { Reservation } from "../types";
 import { StatusBadge, statusTone } from "./status-badge";
-import { tableCode } from "@/features/tables/labels";
 
 export function ReservationListItem({ reservation: r, onPress, trailing }: { reservation: Reservation; onPress?(): void; trailing?: React.ReactNode }) {
-  const { state, now } = useApp();
+  const { now, state } = useApp();
   const late = r.status === "CONFIRMED" ? lateMinutes(r, now) : 0;
   const tone = statusTone(r.status);
   return (
@@ -41,7 +41,7 @@ export function ReservationListItem({ reservation: r, onPress, trailing }: { res
           <StatusBadge status={r.status} />
           <Text style={[ui.caption, { fontVariant: ["tabular-nums"] }]}>{r.code}</Text>
         </View>
-        {late > 0 && <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}><AppIcon name="alert-circle-outline" size={14} color={colors.warning} /><Text style={[ui.caption, { color: colors.warning }]}>Trễ {late} phút · Chưa check-in</Text></View>}
+        {late > 0 && <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}><AppIcon name="alert-circle-outline" size={14} color={colors.warning} /><Text style={[ui.caption, { color: colors.warning }]}>Trễ {late} phút · Khách chưa đến</Text></View>}
       </Pressable>
       {trailing && <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>{trailing}</View>}
     </View>

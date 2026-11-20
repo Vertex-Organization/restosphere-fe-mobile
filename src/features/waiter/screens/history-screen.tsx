@@ -4,11 +4,11 @@ import { Screen } from "@/components/layout/screen";
 import { AppIcon, EmptyState, SearchInput, ui } from "@/components/ui";
 import { colors, radius } from "@/theme";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { dateLabel, dateTimeLabel } from "@/utils/dates";
 import { normalizeSearch } from "@/utils/search";
 import { sessionItems } from "../selectors";
 import { openTable } from "../components/service-ui";
-import { tableCode } from "@/features/tables/labels";
 
 export default function HistoryScreen() {
   const { state } = useApp();

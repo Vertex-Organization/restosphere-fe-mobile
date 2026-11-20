@@ -3,12 +3,12 @@ import { Pressable, Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
 import { AppIcon, Button, EmptyState, Section, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { colors, radius } from "@/theme";
 import { timeLabel } from "@/utils/dates";
 import { FoodThumbnail } from "@/features/menu/components/food-thumbnail";
 import { sessionBill, sessionItems, visibleSessions } from "../selectors";
 import { SessionCard, openServiceScreen } from "../components/service-ui";
-import { tableCode } from "@/features/tables/labels";
 
 export default function WaiterOverviewScreen() {
   const { state } = useApp();

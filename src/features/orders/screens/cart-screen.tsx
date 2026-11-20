@@ -4,11 +4,11 @@ import { router } from "expo-router";
 import { Screen } from "@/components/layout/screen";
 import { Button, ConfirmDialog, EmptyState, Field, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
+import { tableCode } from "@/features/tables/labels";
 import { FoodThumbnail } from "@/features/menu/components/food-thumbnail";
 import { colors, radius } from "@/theme";
 import { canOrder, money, sessionDrafts } from "@/features/waiter/selectors";
 import { AmountRow, MissingSession, SessionHeading, openServiceScreen, useServiceSession, useWaiterAction } from "@/features/waiter/components/service-ui";
-import { tableCode } from "@/features/tables/labels";
 
 function DraftNote({ note, name, editable, save }: { note: string; name: string; editable: boolean; save(note: string): Promise<void> }) {
   const [text, setText] = useState(note);

@@ -55,8 +55,7 @@ export default function TableDetailScreen() {
         />
       </View>
       <Message kind="info">
-        Trạng thái vận hành và lịch giữ bàn là hai thông tin riêng. Lễ tân chỉ
-        xem; không đánh dấu khách rời bàn hoặc đã dọn.
+        Màn hình này chỉ để xem. Việc khách rời bàn và dọn bàn do phục vụ cập nhật.
       </Message>
       <Section title="Khung giờ giữ bàn">
         {holds.length ? (
@@ -64,7 +63,7 @@ export default function TableDetailScreen() {
             <ReservationListItem key={r.id} reservation={r} trailing={
               <View style={{ gap: 4 }}>
                 <Text style={ui.caption}>{r.status === "SEATED" ? "Sử dụng bàn" : "Giữ chỗ"}: {dateTimeLabel(heldRange(r).startsAt)} – {dateTimeLabel(endsAt(heldRange(r)))}</Text>
-                <Text style={ui.caption}>Thêm {state.settings.bufferMinutes} phút đệm giữa các lượt.</Text>
+                <Text style={ui.caption}>Có {state.settings.bufferMinutes} phút dọn bàn giữa các lượt khách.</Text>
               </View>
             } />
           ))
