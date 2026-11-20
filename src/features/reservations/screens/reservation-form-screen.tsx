@@ -22,7 +22,6 @@ import { addMinutes } from "@/utils/dates";
   validateReservationInput,
 } from "../rules";
 import type { Reservation, ReservationInput } from "../types";
-import { tableCode } from "@/features/tables/labels";
 
 export default function ReservationFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();

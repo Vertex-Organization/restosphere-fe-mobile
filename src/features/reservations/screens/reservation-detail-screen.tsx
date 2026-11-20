@@ -20,7 +20,6 @@ import { SOURCE_LABELS } from "../labels";
   getReservationActions,
 } from "../rules";
 import type { ReservationAction } from "../types";
-import { tableCode } from "@/features/tables/labels";
 const ACTION_LABELS: Record<ReservationAction, string> = {
   confirm: "Xác nhận",
   reject: "Từ chối",

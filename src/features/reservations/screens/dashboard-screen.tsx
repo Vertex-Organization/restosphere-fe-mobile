@@ -9,7 +9,6 @@ import { dayKey } from "@/utils/dates";
 import { ReservationListItem } from "../components/reservation-list-item";
 import { canConfirmReservation, getAvailableTables, getReceptionDashboardSummary, selectReservations } from "../rules";
 import type { Reservation } from "../types";
-import { tableCode } from "@/features/tables/labels";
 
 export default function DashboardScreen() {
   const { state, now, run } = useApp();

@@ -13,7 +13,6 @@ import {
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { canHandover } from "../rules";
-import { tableCode } from "@/features/tables/labels";
 export default function HandoverScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, now, run } = useApp();
