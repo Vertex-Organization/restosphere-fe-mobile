@@ -21,6 +21,18 @@ let tokens: Tokens | null = null;
 let sessionGeneration = 0;
 
 let refreshing: Promise<Tokens> | null = null;
+
+/** Server rejection; {@link field} names the request field at fault for validation errors. */
+export class ServerError extends Error {
+  constructor(
+    message: string,
+    readonly field?: string,
+  ) {
+    super(message);
+  }
+}
+
+export const errorField = (e: unknown) => (e instanceof ServerError ? e.field : undefined);
 export async function authenticatedRequest<T>(path: string, body?: unknown): Promise<T> {
   if (!tokens) throw new Error("Vui lòng đăng nhập lại.");
   const generation = sessionGeneration;
@@ -61,12 +73,13 @@ export async function authenticatedRequest<T>(path: string, body?: unknown): Pro
     if (generation !== sessionGeneration) throw new Error("Phiên đăng nhập đã thay đổi.");
     if (!response.ok) {
       const error = await response.json().catch(() => null);
-      throw new Error(
+      throw new ServerError(
         error?.detail ||
           error?.message ||
           (response.status === 401
             ? "Phiên đã hết hạn. Vui lòng đăng nhập lại."
             : "Không thể hoàn tất yêu cầu máy chủ."),
+        typeof error?.field === "string" ? error.field : undefined,
       );
     }
     return (await response.json()) as T;

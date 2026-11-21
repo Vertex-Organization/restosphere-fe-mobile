@@ -16,12 +16,7 @@ import { useApp } from "@/store/app-store";
 import { colors, radius, typography } from "@/theme";
 import { dayKey } from "@/utils/dates";
 import { ReservationListItem } from "../components/reservation-list-item";
-import {
-  canConfirmReservation,
-  getAvailableTables,
-  getReceptionDashboardSummary,
-  selectReservations,
-} from "../rules";
+import { getAvailableTables, getReceptionDashboardSummary, selectReservations } from "../rules";
 import type { Reservation } from "../types";
 
 export default function DashboardScreen() {
@@ -226,12 +221,8 @@ export default function DashboardScreen() {
                   title="Xác nhận đặt bàn"
                   variant="secondary"
                   onPress={() => {
-                    const check = canConfirmReservation(state, r, new Date());
-                    if (!check.ok) setError(check.reason);
-                    else {
-                      setError("");
-                      setConfirm(r);
-                    }
+                    setError("");
+                    setConfirm(r);
                   }}
                 />
               ) : r.status === "CONFIRMED" ? (

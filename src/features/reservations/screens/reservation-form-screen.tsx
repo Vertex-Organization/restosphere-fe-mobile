@@ -13,16 +13,25 @@ import {
   Select,
   ui,
 } from "@/components/ui";
+import { errorField } from "@/features/auth/api";
 import { TableItem } from "@/features/tables/components/table-item";
 import { useApp } from "@/store/app-store";
 import { addMinutes } from "@/utils/dates";
-import {
-  getAvailableTables,
-  getReservationActions,
-  isTableAvailableForTimeRange,
-  validateReservationInput,
-} from "../rules";
+import { getAvailableTables, getReservationActions, isTableAvailableForTimeRange } from "../rules";
 import type { Reservation, ReservationInput } from "../types";
+
+// Server field names shown beside their own input instead of the top banner.
+const FIELDS = [
+  "name",
+  "phone",
+  "guests",
+  "startsAt",
+  "duration",
+  "areaId",
+  "notes",
+  "specialRequests",
+  "tableId",
+];
 
 export default function ReservationFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -66,8 +75,9 @@ function ReservationForm({
   const [tableId, setTable] = useState(r?.tableId ?? "");
   const [notes, setNotes] = useState(r?.notes ?? "");
   const [specialRequests, setSpecial] = useState(r?.specialRequests ?? "");
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  const [field, setField] = useState("");
+  const fieldError = (...keys: string[]) => (keys.includes(field) ? error : undefined);
   const [discard, setDiscard] = useState(false);
   const input: ReservationInput = {
     customer: { name, phone },
@@ -90,38 +100,13 @@ function ReservationForm({
     ? isTableAvailableForTimeRange(state, selected, input, r?.id, now)
     : undefined;
   const invalidSelected = !!tableId && !available.some((t) => t.id === tableId);
-  const live = validateReservationInput(
-    { ...input, preorder: undefined },
-    now,
-    !r || r.startsAt !== input.startsAt,
-    walkIn,
-    state.settings,
-  );
-  const liveError = (key: "guests" | "duration" | "startsAt") => errors[key] ?? live[key];
-  const blocked = !!(live.guests || live.duration || live.startsAt);
   async function save() {
     const actualInput = {
       ...input,
       startsAt: walkIn ? new Date().toISOString() : input.startsAt,
     };
-    const validation = validateReservationInput(
-      // Preorder is not editable here and may hold web kg quantities (1.5); the server validates it.
-      { ...actualInput, preorder: undefined },
-      new Date(),
-      !r || r.startsAt !== actualInput.startsAt,
-      walkIn,
-      state.settings,
-    );
-    setErrors(validation);
     setError("");
-    if (
-      (!walkIn && !name.trim()) ||
-      !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s().-]/g, "")) ||
-      !areaId
-    )
-      return setError("Nhập tên khách, số điện thoại hợp lệ và chọn khu vực.");
-    if (Object.keys(validation).length)
-      return setError("Kiểm tra các trường được đánh dấu bên dưới.");
+    setField("");
     try {
       const id = r
         ? (await run({ type: "edit", id: r.id, input: actualInput }), r.id)
@@ -129,8 +114,10 @@ function ReservationForm({
       if (id) router.replace(`/reception/reservations/${id}`);
     } catch (e) {
       setError((e as Error).message);
+      setField(errorField(e) ?? "");
     }
   }
+  const generalError = error && !FIELDS.includes(field) ? error : "";
   return (
     <Screen>
       <Stack.Screen
@@ -150,13 +137,13 @@ function ReservationForm({
           ? "Chọn bàn sẵn sàng. Khách được ghi nhận đã đến, sau đó bàn giao cho phục vụ."
           : "Lịch mới ở trạng thái chờ xác nhận và chưa giữ bàn."}
       </Text>
-      {!!error && <Message>{error}</Message>}
+      {!!generalError && <Message>{generalError}</Message>}
       <Section title="Thông tin khách">
         <Field
           label="Tên khách *"
           value={name}
           onChangeText={setName}
-          error={errors.name}
+          error={fieldError("name")}
           autoCapitalize="words"
         />
         <Field
@@ -164,14 +151,14 @@ function ReservationForm({
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
-          error={errors.phone}
+          error={fieldError("phone")}
         />
         <Field
           label="Số khách *"
           value={guests}
           onChangeText={setGuests}
           keyboardType="number-pad"
-          error={liveError("guests")}
+          error={fieldError("guests")}
         />
       </Section>
       {!walkIn && (
@@ -180,13 +167,13 @@ function ReservationForm({
           <DateField label="Giờ đến *" mode="time" value={date} onChange={setDate} />
         </Section>
       )}
-      {liveError("startsAt") && <Message>{liveError("startsAt")}</Message>}
+      {!!fieldError("startsAt") && <Message>{fieldError("startsAt")}</Message>}
       <Field
         label="Thời lượng dự kiến (phút) *"
         value={duration}
         onChangeText={setDuration}
         keyboardType="number-pad"
-        error={liveError("duration")}
+        error={fieldError("duration")}
       />
       <Select
         label="Khu vực *"
@@ -200,8 +187,21 @@ function ReservationForm({
           ...state.areas.map((a) => ({ value: a.id, label: a.name })),
         ]}
       />
-      <Field label="Ghi chú" value={notes} onChangeText={setNotes} multiline />
-      <Field label="Yêu cầu đặc biệt" value={specialRequests} onChangeText={setSpecial} multiline />
+      {!!fieldError("areaId") && <Message>{fieldError("areaId")}</Message>}
+      <Field
+        label="Ghi chú"
+        value={notes}
+        onChangeText={setNotes}
+        multiline
+        error={fieldError("notes")}
+      />
+      <Field
+        label="Yêu cầu đặc biệt"
+        value={specialRequests}
+        onChangeText={setSpecial}
+        multiline
+        error={fieldError("specialRequests")}
+      />
       {walkIn ? (
         <Section title="Chọn bàn sẵn sàng">
           {!available.length && (
@@ -256,17 +256,14 @@ function ReservationForm({
         />
       )}
       {selectedCheck && !selectedCheck.ok && <Message>{selectedCheck.reason}</Message>}
+      {!!fieldError("tableId") && <Message>{fieldError("tableId")}</Message>}
       {!available.length && !walkIn && (
         <Message>
           Không có bàn phù hợp khung giờ và số khách hiện tại. Hãy điều chỉnh thông tin trước khi
           lưu.
         </Message>
       )}
-      <Button
-        title={walkIn ? "Xác nhận khách đã đến · Tiếp tục" : "Lưu đặt bàn"}
-        disabled={blocked || (walkIn ? !tableId || invalidSelected : invalidSelected)}
-        onPress={save}
-      />
+      <Button title={walkIn ? "Xác nhận khách đã đến · Tiếp tục" : "Lưu đặt bàn"} onPress={save} />
       <Button title="Hủy thao tác" variant="secondary" onPress={() => setDiscard(true)} />
       {discard && (
         <ConfirmDialog

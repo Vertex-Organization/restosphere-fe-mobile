@@ -5,10 +5,10 @@ import { Screen } from "@/components/layout/screen";
 import { Button, ConfirmDialog, DetailRow, EmptyState, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
-import { canHandover } from "../rules";
+
 export default function HandoverScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, now, run } = useApp();
+  const { state, run } = useApp();
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const r = state.reservations.find((item) => item.id === id);
@@ -19,7 +19,6 @@ export default function HandoverScreen() {
       </Screen>
     );
   const table = state.tables.find((t) => t.id === r.tableId);
-  const check = canHandover(state, r, now);
   return (
     <Screen>
       <Text style={ui.heading}>
@@ -33,9 +32,8 @@ export default function HandoverScreen() {
         <DetailRow label="Ghi chú" value={r.notes || "Không có"} />
         <DetailRow label="Yêu cầu đặc biệt" value={r.specialRequests || "Không có"} />
       </View>
-      {!check.ok && <Message>{check.reason}</Message>}
       {!!error && <Message>{error}</Message>}
-      <Button title="Xác nhận bàn giao" disabled={!check.ok} onPress={() => setConfirm(true)} />
+      <Button title="Xác nhận bàn giao" onPress={() => setConfirm(true)} />
       {r.status === "ARRIVED" && (
         <Button
           title="Gán / đổi bàn"

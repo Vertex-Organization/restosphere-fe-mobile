@@ -15,7 +15,7 @@ import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { StatusBadge } from "../components/status-badge";
 import { SOURCE_LABELS } from "../labels";
-import { canConfirmReservation, getAvailableTables, getReservationActions } from "../rules";
+import { getAvailableTables, getReservationActions } from "../rules";
 import type { ReservationAction } from "../types";
 const ACTION_LABELS: Record<ReservationAction, string> = {
   confirm: "Xác nhận",
@@ -61,10 +61,6 @@ export default function ReservationDetailScreen() {
   const candidate = r.tableId ? table?.code : getAvailableTables(state, r, r.id, now)[0]?.code;
   function act(action: ReservationAction) {
     setError("");
-    if (action === "confirm") {
-      const check = canConfirmReservation(state, r!, new Date());
-      if (!check.ok) return setError(check.reason);
-    }
     if (action === "confirm" || action === "reject" || action === "cancel" || action === "no-show")
       setDialog(action);
     else if (action === "edit") router.push(`/reception/reservations/form?id=${id}`);

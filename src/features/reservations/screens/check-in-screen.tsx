@@ -6,12 +6,8 @@ import { Button, EmptyState, Field, Message, SearchInput, ui } from "@/component
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { ReservationListItem } from "../components/reservation-list-item";
-import {
-  canCheckIn,
-  getAvailableTables,
-  isTableAvailableForTimeRange,
-  matchesReservation,
-} from "../rules";
+import { errorField } from "@/features/auth/api";
+import { getAvailableTables, isTableAvailableForTimeRange, matchesReservation } from "../rules";
 import type { Reservation } from "../types";
 export default function CheckInScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -67,10 +63,10 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
   const { state, now, run } = useApp();
   const [actual, setActual] = useState(String(r.guests));
   const [error, setError] = useState("");
-  const check = canCheckIn(r, now, state.settings.earlyCheckInMinutes);
+  const [field, setField] = useState("");
   const table = state.tables.find((t) => t.id === r.tableId);
   const actualCount = Number(actual);
-  const badCount = !Number.isInteger(actualCount) || actualCount < 1 || actualCount > 200;
+  const badCount = !Number.isInteger(actualCount) || actualCount < 1;
   const tooMany = table && actualCount > table.capacity;
   const availability = table
     ? isTableAvailableForTimeRange(
@@ -107,14 +103,12 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
       <Text style={ui.text}>
         Bàn {table ? `${table.code} · ${table.capacity} chỗ` : "chưa gán"}
       </Text>
-      {!check.ok && <Message>{check.reason}</Message>}
       <Field
         label="Số khách thực tế *"
         keyboardType="number-pad"
         value={actual}
         onChangeText={setActual}
-        editable={check.ok}
-        error={badCount ? "Số khách thực tế từ 1 đến 200." : undefined}
+        error={field === "actualGuests" ? error : undefined}
       />
       {tooMany && (
         <Message>
@@ -139,14 +133,15 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
           trống, đổi khu hoặc nhờ quản lý duyệt ở màn chi tiết lịch đặt.
         </Message>
       )}
-      {!!error && <Message>{error}</Message>}
+      {!!error && field !== "actualGuests" && <Message>{error}</Message>}
       <Message kind="info">
         Bước này chỉ ghi nhận khách đã đến. Bàn chuyển sang “đang sử dụng” khi bàn giao cho phục vụ.
       </Message>
       <Button
         title="Xác nhận khách đã đến"
-        disabled={!check.ok || badCount}
         onPress={async () => {
+          setError("");
+          setField("");
           try {
             await run({ type: "check-in", id: r.id, actualGuests: Number(actual) });
             router.replace(
@@ -156,6 +151,7 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
             );
           } catch (e) {
             setError((e as Error).message);
+            setField(errorField(e) ?? "");
           }
         }}
       />

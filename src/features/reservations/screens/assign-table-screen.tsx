@@ -33,7 +33,7 @@ export default function AssignTableScreen() {
     table,
     check: canAssignTable(state, r, table.id, now),
   }));
-  const validSelected = selected && canAssignTable(state, r, selected, now).ok;
+
   return (
     <Screen scroll={false}>
       <FlatList
@@ -61,7 +61,7 @@ export default function AssignTableScreen() {
               title={
                 selected ? `Xác nhận bàn ${tableCode(state.tables, selected)}` : "Chọn bàn bên dưới"
               }
-              disabled={!validSelected}
+              disabled={!selected}
               onPress={() => setConfirm(true)}
             />
             <Button
