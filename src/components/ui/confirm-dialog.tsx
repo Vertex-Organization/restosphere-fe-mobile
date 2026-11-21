@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "@/theme";
 import { Button } from "./button";
@@ -39,19 +32,14 @@ export function ConfirmDialog({
           padding: 20,
         }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
           >
             <View
               accessibilityViewIsModal
-              style={[
-                ui.panel,
-                { width: "100%", maxWidth: 480, alignSelf: "center", gap: 16 },
-              ]}
+              style={[ui.panel, { width: "100%", maxWidth: 480, alignSelf: "center", gap: 16 }]}
             >
               <Text accessibilityRole="header" style={ui.heading}>
                 {title}
@@ -70,8 +58,7 @@ export function ConfirmDialog({
               <Button
                 title="Xác nhận"
                 onPress={() => {
-                  if (requireReason && !reason.trim())
-                    return setError("Vui lòng nhập lý do.");
+                  if (requireReason && !reason.trim()) return setError("Vui lòng nhập lý do.");
                   onConfirm(reason);
                 }}
               />

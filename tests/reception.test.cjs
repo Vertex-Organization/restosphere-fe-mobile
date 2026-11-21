@@ -5,9 +5,7 @@ const {
   DEMO_STAFF,
   restoreDemoState,
 } = require("../.cache/tests/tests/fixtures/demo-data.js");
-const {
-  executeCommand,
-} = require("../.cache/tests/tests/fixtures/reception-commands.js");
+const { executeCommand } = require("../.cache/tests/tests/fixtures/reception-commands.js");
 const rules = require("../.cache/tests/src/features/reservations/rules.js");
 const { dayKey, addMinutes } = require("../.cache/tests/src/utils/dates.js");
 const {
@@ -36,15 +34,28 @@ function input(overrides = {}) {
 }
 
 test("reservation edits preserve preorder metadata and reject invalid preorder input", () => {
-  const s = seed(); const r = get(s, "r1");
+  const s = seed();
+  const r = get(s, "r1");
   const updated = run(s, { type: "edit", id: r.id, input: input() });
   assert.deepEqual(get(updated, r.id).preorder, r.preorder);
   assert.equal(get(updated, r.id).email, r.email);
   for (const quantity of [0, -1, 1.5, 100, NaN]) {
-    assert.throws(() => run(s, { type: "create", input: input({ preorder: [{ menuItemId: "beef", quantity }] }) }));
-    assert.throws(() => run(s, { type: "edit", id: r.id, input: input({ preorder: [{ menuItemId: "beef", quantity }] }) }));
+    assert.throws(() =>
+      run(s, { type: "create", input: input({ preorder: [{ menuItemId: "beef", quantity }] }) }),
+    );
+    assert.throws(() =>
+      run(s, {
+        type: "edit",
+        id: r.id,
+        input: input({ preorder: [{ menuItemId: "beef", quantity }] }),
+      }),
+    );
   }
-  const changed = run(s, { type: "edit", id: r.id, input: input({ preorder: [{ menuItemId: "beef", quantity: 2 }], email: "guest@example.com" }) });
+  const changed = run(s, {
+    type: "edit",
+    id: r.id,
+    input: input({ preorder: [{ menuItemId: "beef", quantity: 2 }], email: "guest@example.com" }),
+  });
   assert.equal(get(changed, r.id).preorder[0].menuItemId, "beef");
   assert.equal(get(changed, r.id).email, "guest@example.com");
 });
@@ -54,35 +65,19 @@ test("đăng nhập đúng và sai mật khẩu", async () => {
     (await mockAuthenticationRepository.signIn("receptionist", "123456")).role,
     "RECEPTIONIST",
   );
-  await assert.rejects(
-    mockAuthenticationRepository.signIn("receptionist", "wrong"),
-    /không đúng/,
-  );
-  await assert.rejects(
-    mockAuthenticationRepository.signIn("manager", "123456"),
-    /không đúng/,
-  );
+  await assert.rejects(mockAuthenticationRepository.signIn("receptionist", "wrong"), /không đúng/);
+  await assert.rejects(mockAuthenticationRepository.signIn("manager", "123456"), /không đúng/);
 });
 test("chặn mọi command khi chưa đăng nhập hoặc khác vai trò", () => {
   for (const role of [undefined, "WAITER", "KITCHEN", "CASHIER", "MANAGER"]) {
     const s = seed();
     s.session = role ? { ...DEMO_STAFF, role } : null;
-    assert.throws(
-      () => run(s, { type: "confirm", id: "r1" }),
-      /không có quyền/,
-    );
-    assert.deepEqual(
-      rules.getReservationActions(get(s, "r1"), now, role ?? "WAITER"),
-      [],
-    );
+    assert.throws(() => run(s, { type: "confirm", id: "r1" }), /không có quyền/);
+    assert.deepEqual(rules.getReservationActions(get(s, "r1"), now, role ?? "WAITER"), []);
   }
 });
 test("tạo lịch PENDING, không tự xác nhận hoặc chiếm bàn", () => {
-  const result = executeCommand(
-    seed(),
-    { type: "create", input: input() },
-    now,
-  );
+  const result = executeCommand(seed(), { type: "create", input: input() }, now);
   const r = get(result.state, result.reservationId);
   assert.equal(r.status, "PENDING");
   assert.equal(r.tableId, undefined);
@@ -108,8 +103,7 @@ test("xác nhận kiểm tra chỗ, giữ bàn; không xác nhận lần hai", (
   assert.equal(r.status, "CONFIRMED");
   assert.ok(r.tableId);
   assert.equal(
-    after.assignments.filter((a) => a.reservationId === r.id && !a.releasedAt)
-      .length,
+    after.assignments.filter((a) => a.reservationId === r.id && !a.releasedAt).length,
     1,
   );
   assert.equal(get(before, "r1").status, "PENDING");
@@ -151,10 +145,7 @@ test("không gán bàn thiếu chỗ hoặc đang tạm ngưng / dọn", () => {
 test("bàn AVAILABLE vẫn bị chặn bởi giữ chỗ trùng giờ", () => {
   const s = seed();
   assert.equal(s.tables.find((t) => t.id === "A02").status, "AVAILABLE");
-  assert.throws(
-    () => run(s, { type: "assign", id: "r6", tableId: "A02" }),
-    /trùng khung giờ/,
-  );
+  assert.throws(() => run(s, { type: "assign", id: "r6", tableId: "A02" }), /trùng khung giờ/);
 });
 test("bàn có lịch tương lai vẫn dùng được ở giờ khác", () => {
   const s = seed();
@@ -172,15 +163,8 @@ test("bàn có lịch tương lai vẫn dùng được ở giờ khác", () => {
 test("đổi bàn giải phóng assignment cũ và tạo assignment mới", () => {
   const s = run(seed(), { type: "assign", id: "r3", tableId: "G02" });
   assert.equal(get(s, "r3").tableId, "G02");
-  assert.ok(
-    s.assignments.find((a) => a.reservationId === "r3" && a.tableId === "A02")
-      .releasedAt,
-  );
-  assert.equal(
-    s.assignments.filter((a) => a.reservationId === "r3" && !a.releasedAt)
-      .length,
-    1,
-  );
+  assert.ok(s.assignments.find((a) => a.reservationId === "r3" && a.tableId === "A02").releasedAt);
+  assert.equal(s.assignments.filter((a) => a.reservationId === "r3" && !a.releasedAt).length, 1);
 });
 test("sửa thông tin phải kiểm tra lại sức chứa và xung đột", () => {
   const s = seed();
@@ -215,21 +199,12 @@ test("check-in ghi nhận thời điểm và số thực tế, không chiếm b�
   assert.equal(r.actualGuests, 5);
   assert.equal(r.arrivedAt, now.toISOString());
   assert.equal(s.tables.find((t) => t.id === "A02").status, "AVAILABLE");
-  assert.throws(
-    () => run(s, { type: "check-in", id: "r3", actualGuests: 4 }),
-    /trước đó/,
-  );
+  assert.throws(() => run(s, { type: "check-in", id: "r3", actualGuests: 4 }), /trước đó/);
   assert.equal(rules.canHandover(s, r, now).ok, false);
 });
 test("chặn check-in sai trạng thái hoặc số khách sai", () => {
-  assert.throws(
-    () => run(seed(), { type: "check-in", id: "r1", actualGuests: 2 }),
-    /đã xác nhận/,
-  );
-  assert.throws(
-    () => run(seed(), { type: "check-in", id: "r3", actualGuests: 0 }),
-    /số nguyên/,
-  );
+  assert.throws(() => run(seed(), { type: "check-in", id: "r1", actualGuests: 2 }), /đã xác nhận/);
+  assert.throws(() => run(seed(), { type: "check-in", id: "r3", actualGuests: 0 }), /số nguyên/);
 });
 test("bàn giao chuyển SEATED + OCCUPIED, khóa thao tác của lễ tân", () => {
   const s = run(seed(), { type: "handover", id: "r6" });
@@ -252,10 +227,7 @@ test("không bàn giao nếu chưa đến, thiếu bàn, bàn không sẵn sàng
   for (const tableStatus of ["OCCUPIED", "CLEANING", "OUT_OF_SERVICE"]) {
     const s = seed();
     s.tables.find((t) => t.id === "B01").status = tableStatus;
-    assert.throws(
-      () => run(s, { type: "handover", id: "r6" }),
-      /chưa sẵn sàng/,
-    );
+    assert.throws(() => run(s, { type: "handover", id: "r6" }), /chưa sẵn sàng/);
   }
   const s = seed();
   get(s, "r6").tableId = undefined;
@@ -285,10 +257,7 @@ test("bàn giao sớm/trễ phải kiểm tra khoảng dùng từ giờ hiện t
     tableId: "B01",
     startsAt: addMinutes(now, 100).toISOString(),
   });
-  assert.throws(
-    () => run(s, { type: "handover", id: arrived.id }),
-    /trùng khung giờ/,
-  );
+  assert.throws(() => run(s, { type: "handover", id: arrived.id }), /trùng khung giờ/);
 });
 test("khách đang sử dụng quá giờ vẫn chặn tiếp nhận ngay", () => {
   const s = seed();
@@ -309,14 +278,8 @@ test("khách đang sử dụng quá giờ vẫn chặn tiếp nhận ngay", () =
 test("NO_SHOW cần 30 phút chờ, lý do và giải phóng giữ chỗ", () => {
   const s = seed();
   assert.equal(rules.canMarkNoShow(get(s, "r5"), now).ok, false);
-  assert.throws(
-    () => run(s, { type: "no-show", id: "r5", reason: "Chưa đến" }),
-    /30 phút/,
-  );
-  assert.throws(
-    () => run(s, { type: "no-show", id: "r4", reason: "" }),
-    /lý do/,
-  );
+  assert.throws(() => run(s, { type: "no-show", id: "r5", reason: "Chưa đến" }), /30 phút/);
+  assert.throws(() => run(s, { type: "no-show", id: "r4", reason: "" }), /lý do/);
   const after = run(s, {
     type: "no-show",
     id: "r4",
@@ -324,8 +287,7 @@ test("NO_SHOW cần 30 phút chờ, lý do và giải phóng giữ chỗ", () =>
   });
   assert.equal(get(after, "r4").status, "NO_SHOW");
   assert.equal(
-    after.assignments.filter((a) => a.reservationId === "r4" && !a.releasedAt)
-      .length,
+    after.assignments.filter((a) => a.reservationId === "r4" && !a.releasedAt).length,
     0,
   );
 });
@@ -336,11 +298,7 @@ test("hủy / từ chối yêu cầu lý do và không giữ chỗ nữa", () =>
     reason: "Khách đổi kế hoạch",
   });
   assert.equal(get(s, "r3").status, "CANCELLED");
-  assert.equal(
-    s.assignments.filter((a) => a.reservationId === "r3" && !a.releasedAt)
-      .length,
-    0,
-  );
+  assert.equal(s.assignments.filter((a) => a.reservationId === "r3" && !a.releasedAt).length, 0);
   assert.equal(
     rules.isTableAvailableForTimeRange(
       s,
@@ -369,19 +327,12 @@ test("walk-in không bắt buộc tên/phone, phải chọn bàn, chỉ ARRIVED"
     tableId: "G01",
     startsAt: now.toISOString(),
   });
-  const result = executeCommand(
-    seed(),
-    { type: "create", input: walk, walkIn: true },
-    now,
-  );
+  const result = executeCommand(seed(), { type: "create", input: walk, walkIn: true }, now);
   const r = get(result.state, result.reservationId);
   assert.equal(r.status, "ARRIVED");
   assert.equal(r.actualGuests, 2);
   assert.equal(r.source, "WALK_IN");
-  assert.equal(
-    result.state.tables.find((t) => t.id === "G01").status,
-    "AVAILABLE",
-  );
+  assert.equal(result.state.tables.find((t) => t.id === "G01").status, "AVAILABLE");
   assert.throws(
     () =>
       run(seed(), {
@@ -406,28 +357,16 @@ test("dashboard tính lại từ state sau xác nhận / check-in / bàn giao", 
   let s = seed();
   const before = rules.getReceptionDashboardSummary(s, now);
   s = run(s, { type: "confirm", id: "r1" });
-  assert.equal(
-    rules.getReceptionDashboardSummary(s, now).pending,
-    before.pending - 1,
-  );
+  assert.equal(rules.getReceptionDashboardSummary(s, now).pending, before.pending - 1);
   s = run(s, { type: "check-in", id: "r3", actualGuests: 4 });
-  assert.equal(
-    rules.getReceptionDashboardSummary(s, now).arrived,
-    before.arrived + 1,
-  );
+  assert.equal(rules.getReceptionDashboardSummary(s, now).arrived, before.arrived + 1);
   s = run(s, { type: "handover", id: "r6" });
-  assert.equal(
-    rules.getReceptionDashboardSummary(s, now).available,
-    before.available - 1,
-  );
+  assert.equal(rules.getReceptionDashboardSummary(s, now).available, before.available - 1);
 });
 test("tìm tên không dấu, số điện thoại, mã; lọc ngày và trạng thái", () => {
   const s = seed();
   assert.equal(rules.matchesReservation(get(s, "r3"), "nguyen huong"), true);
-  assert.equal(
-    rules.matchesReservation(get(s, "r3"), get(s, "r3").customer.phone),
-    true,
-  );
+  assert.equal(rules.matchesReservation(get(s, "r3"), get(s, "r3").customer.phone), true);
   assert.equal(rules.matchesReservation(get(s, "r3"), "rs0003"), true);
   const results = rules.selectReservations(s, dayKey(now), "", "PENDING");
   assert.equal(results.length, 2);
@@ -448,8 +387,7 @@ test("khôi phục phiên đúng role, không lưu password; ngày mới reseed"
   assert.equal("password" in restored.session, false);
   assert.equal(Object.values(restored.session).includes("123456"), false);
   assert.equal(
-    restoreDemoState({ ...s, session: { ...DEMO_STAFF, role: "MANAGER" } }, now)
-      .session,
+    restoreDemoState({ ...s, session: { ...DEMO_STAFF, role: "MANAGER" } }, now).session,
     null,
   );
   const tomorrow = addMinutes(now, 1440);
@@ -461,11 +399,7 @@ test("khôi phục phiên đúng role, không lưu password; ngày mới reseed"
 });
 
 test("luồng điện thoại đầy đủ: tạo → xác nhận → check-in → bàn giao", () => {
-  const created = executeCommand(
-    seed(),
-    { type: "create", input: input() },
-    now,
-  );
+  const created = executeCommand(seed(), { type: "create", input: input() }, now);
   const id = created.reservationId;
   let s = run(created.state, { type: "confirm", id });
   const arrival = new Date(get(s, id).startsAt);
@@ -519,10 +453,17 @@ test("dữ liệu lưu bị hỏng bị từ chối trước khi đưa vào UI",
 });
 
 test("request-exception sends APPROVAL to manager with reason and history", () => {
-  const s = seed(); const r = get(s, "r1");
+  const s = seed();
+  const r = get(s, "r1");
   assert.throws(() => run(s, { type: "request-exception", id: r.id, reason: "ngan" }));
-  assert.throws(() => run(s, { type: "request-exception", id: "missing", reason: "Doan khach dong" }));
-  const next = run(s, { type: "request-exception", id: r.id, reason: "Doan khach dong, can ghep ban" });
+  assert.throws(() =>
+    run(s, { type: "request-exception", id: "missing", reason: "Doan khach dong" }),
+  );
+  const next = run(s, {
+    type: "request-exception",
+    id: r.id,
+    reason: "Doan khach dong, can ghep ban",
+  });
   assert.equal(next.outbox[0].kind, "APPROVAL");
   assert.equal(next.outbox[0].audience, "MANAGER");
   assert.equal(next.outbox[0].targetId, r.id);
@@ -532,7 +473,8 @@ test("request-exception sends APPROVAL to manager with reason and history", () =
 test("buffer and no-show thresholds come from settings and old saved state falls back to defaults", () => {
   const s = seed();
   assert.deepEqual(s.settings, { bufferMinutes: 15, noShowMinutes: 30 });
-  const r = get(s, "r3"); r.startsAt = addMinutes(now, -20).toISOString();
+  const r = get(s, "r3");
+  r.startsAt = addMinutes(now, -20).toISOString();
   assert.equal(rules.canMarkNoShow(r, now, 30).ok, false);
   assert.equal(rules.canMarkNoShow(r, now, s.settings.noShowMinutes).ok, false);
   assert.equal(rules.canMarkNoShow(r, now, 15).ok, true);
@@ -540,22 +482,41 @@ test("buffer and no-show thresholds come from settings and old saved state falls
   const b = { startsAt: addMinutes(now, 80).toISOString(), duration: 60 };
   assert.equal(rules.hasTimeConflict(a, b, 15), false);
   assert.equal(rules.hasTimeConflict(a, b, 30), true);
-  const old = JSON.parse(JSON.stringify(s)); delete old.settings;
+  const old = JSON.parse(JSON.stringify(s));
+  delete old.settings;
   assert.deepEqual(restoreDemoState(old, now).settings, { bufferMinutes: 15, noShowMinutes: 30 });
-  const bad = { ...JSON.parse(JSON.stringify(s)), settings: { bufferMinutes: -5, noShowMinutes: "x" } };
+  const bad = {
+    ...JSON.parse(JSON.stringify(s)),
+    settings: { bufferMinutes: -5, noShowMinutes: "x" },
+  };
   assert.deepEqual(restoreDemoState(bad, now).settings, { bufferMinutes: 15, noShowMinutes: 30 });
-  const custom = { ...JSON.parse(JSON.stringify(s)), settings: { bufferMinutes: 30, noShowMinutes: 45 } };
-  assert.deepEqual(restoreDemoState(custom, now).settings, { bufferMinutes: 30, noShowMinutes: 45 });
+  const custom = {
+    ...JSON.parse(JSON.stringify(s)),
+    settings: { bufferMinutes: 30, noShowMinutes: 45 },
+  };
+  assert.deepEqual(restoreDemoState(custom, now).settings, {
+    bufferMinutes: 30,
+    noShowMinutes: 45,
+  });
 });
 test("assign to a different table emits TABLE_REASSIGNED for reception and waiter when a session exists", () => {
-  const s = seed(); const r = get(s, "r3");
+  const s = seed();
+  const r = get(s, "r3");
   const old = r.tableId;
-  const target = ["G02", "G03", "A02"].find((id) => id !== old && rules.canAssignTable(s, r, id, now).ok);
+  const target = ["G02", "G03", "A02"].find(
+    (id) => id !== old && rules.canAssignTable(s, r, id, now).ok,
+  );
   assert.ok(target);
   const next = run(s, { type: "assign", id: r.id, tableId: target });
   assert.equal(next.notifications[0].kind, old ? "TABLE_REASSIGNED" : undefined);
   const withSession = JSON.parse(JSON.stringify(s));
-  withSession.tableSessions.push({ id: "ts-x", tableId: old, reservationId: r.id, waiterId: "NV002", handedOverAt: now.toISOString() });
+  withSession.tableSessions.push({
+    id: "ts-x",
+    tableId: old,
+    reservationId: r.id,
+    waiterId: "NV002",
+    handedOverAt: now.toISOString(),
+  });
   const moved = run(withSession, { type: "assign", id: r.id, tableId: target });
   if (old) {
     assert.equal(moved.tableSessions.find((x) => x.id === "ts-x").tableId, target);

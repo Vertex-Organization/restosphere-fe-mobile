@@ -2,14 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
-import {
-  Button,
-  ConfirmDialog,
-  DetailRow,
-  EmptyState,
-  Message,
-  ui,
-} from "@/components/ui";
+import { Button, ConfirmDialog, DetailRow, EmptyState, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { canHandover } from "../rules";
@@ -35,27 +28,14 @@ export default function HandoverScreen() {
       <View style={ui.panel}>
         <DetailRow label="Số khách thực tế" value={r.actualGuests} />
         <DetailRow label="Bàn" value={table?.code} />
-        <DetailRow
-          label="Khu vực"
-          value={state.areas.find((a) => a.id === table?.areaId)?.name}
-        />
-        <DetailRow
-          label="Đến lúc"
-          value={r.arrivedAt ? dateTimeLabel(r.arrivedAt) : "Chưa đến"}
-        />
+        <DetailRow label="Khu vực" value={state.areas.find((a) => a.id === table?.areaId)?.name} />
+        <DetailRow label="Đến lúc" value={r.arrivedAt ? dateTimeLabel(r.arrivedAt) : "Chưa đến"} />
         <DetailRow label="Ghi chú" value={r.notes || "Không có"} />
-        <DetailRow
-          label="Yêu cầu đặc biệt"
-          value={r.specialRequests || "Không có"}
-        />
+        <DetailRow label="Yêu cầu đặc biệt" value={r.specialRequests || "Không có"} />
       </View>
       {!check.ok && <Message>{check.reason}</Message>}
       {!!error && <Message>{error}</Message>}
-      <Button
-        title="Xác nhận bàn giao"
-        disabled={!check.ok}
-        onPress={() => setConfirm(true)}
-      />
+      <Button title="Xác nhận bàn giao" disabled={!check.ok} onPress={() => setConfirm(true)} />
       {r.status === "ARRIVED" && (
         <Button
           title="Gán / đổi bàn"

@@ -18,9 +18,7 @@ export function Select({
 }) {
   return (
     <View style={{ gap: 6 }}>
-      <Text style={ui.label}>
-        {label}
-      </Text>
+      <Text style={ui.label}>{label}</Text>
       <Host
         colorScheme="light"
         seedColor={colors.primary}

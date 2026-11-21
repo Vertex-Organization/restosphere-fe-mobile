@@ -17,9 +17,7 @@ export function AppIcon({
     <Ionicons
       name={name}
       size={size}
-      color={
-        typeof color === "number" || color == null ? colors.primary : color
-      }
+      color={typeof color === "number" || color == null ? colors.primary : color}
       accessible={false}
     />
   );

@@ -76,14 +76,7 @@ export interface ReceptionRepository {
   save(state: ReceptionState): Promise<void>;
 }
 export type ReservationAction =
-  | "confirm"
-  | "reject"
-  | "cancel"
-  | "edit"
-  | "assign"
-  | "check-in"
-  | "handover"
-  | "no-show";
+  "confirm" | "reject" | "cancel" | "edit" | "assign" | "check-in" | "handover" | "no-show";
 export type ReceptionCommand =
   | { type: "create"; input: ReservationInput; walkIn?: boolean }
   | { type: "edit"; id: string; input: ReservationInput }

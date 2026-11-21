@@ -9,7 +9,13 @@ import type {
 } from "../../src/features/reservations/types";
 import { TABLE_LABELS } from "../../src/features/tables/labels";
 import { addMinutes, dayKey } from "../../src/utils/dates";
-import { DEMO_WAITER, OTHER_WAITER, emptyServiceData, isValidServiceData, seedWaiterScenarios } from "./waiter-data";
+import {
+  DEMO_WAITER,
+  OTHER_WAITER,
+  emptyServiceData,
+  isValidServiceData,
+  seedWaiterScenarios,
+} from "./waiter-data";
 import { syncHandovers } from "./handover";
 
 export const DEMO_STAFF: Staff = {
@@ -129,39 +135,40 @@ export function createMockState(now = new Date()): ReceptionState {
     ["Mai Phương", 60, 8, "REJECTED"],
     ["Trịnh Vy", 35, 10, "CONFIRMED", "V01"],
   ];
-  const reservations: Reservation[] = specs.map(
-    ([name, offset, guests, status, tableId], i) => ({
-      id: `r${i + 1}`,
-      code: `RS${String(i + 1).padStart(4, "0")}`,
-      customer: { name, phone: `0901234${String(i).padStart(3, "0")}` },
-      startsAt: addMinutes(now, offset).toISOString(),
-      duration: status === "SEATED" ? 120 : 90,
-      guests,
-      tableId,
-      status,
-      source: i < 2 ? "WEB" : "PHONE",
-      email: i === 0 ? "quocbao@example.com" : undefined,
-      occasion: i === 0 ? "Sinh nhật" : undefined,
-      preorder: i === 0 ? [{ menuItemId: "grilled-shrimp", quantity: 2, note: "Ít cay" }, { menuItemId: "peach-tea", quantity: 4 }] : undefined,
-      notes: i === 0 ? "Khách có trẻ nhỏ." : "",
-      specialRequests: i === 12 ? "Phòng yên tĩnh, ghế trẻ em." : "",
-      actualGuests: ["ARRIVED", "SEATED", "COMPLETED"].includes(status)
-        ? guests
+  const reservations: Reservation[] = specs.map(([name, offset, guests, status, tableId], i) => ({
+    id: `r${i + 1}`,
+    code: `RS${String(i + 1).padStart(4, "0")}`,
+    customer: { name, phone: `0901234${String(i).padStart(3, "0")}` },
+    startsAt: addMinutes(now, offset).toISOString(),
+    duration: status === "SEATED" ? 120 : 90,
+    guests,
+    tableId,
+    status,
+    source: i < 2 ? "WEB" : "PHONE",
+    email: i === 0 ? "quocbao@example.com" : undefined,
+    occasion: i === 0 ? "Sinh nhật" : undefined,
+    preorder:
+      i === 0
+        ? [
+            { menuItemId: "grilled-shrimp", quantity: 2, note: "Ít cay" },
+            { menuItemId: "peach-tea", quantity: 4 },
+          ]
         : undefined,
-      arrivedAt: ["ARRIVED", "SEATED", "COMPLETED"].includes(status)
-        ? addMinutes(now, status === "ARRIVED" ? -5 : offset).toISOString()
-        : undefined,
-      handedOverAt:
-        status === "SEATED" ? addMinutes(now, -35).toISOString() : undefined,
-      reason: status === "REJECTED" ? "Khách đã đổi kế hoạch." : undefined,
-      history: [
-        {
-          at: addMinutes(now, -300).toISOString(),
-          text: `Dữ liệu mẫu · ${STATUS_LABELS[status]}`,
-        },
-      ],
-    }),
-  );
+    notes: i === 0 ? "Khách có trẻ nhỏ." : "",
+    specialRequests: i === 12 ? "Phòng yên tĩnh, ghế trẻ em." : "",
+    actualGuests: ["ARRIVED", "SEATED", "COMPLETED"].includes(status) ? guests : undefined,
+    arrivedAt: ["ARRIVED", "SEATED", "COMPLETED"].includes(status)
+      ? addMinutes(now, status === "ARRIVED" ? -5 : offset).toISOString()
+      : undefined,
+    handedOverAt: status === "SEATED" ? addMinutes(now, -35).toISOString() : undefined,
+    reason: status === "REJECTED" ? "Khách đã đổi kế hoạch." : undefined,
+    history: [
+      {
+        at: addMinutes(now, -300).toISOString(),
+        text: `Dữ liệu mẫu · ${STATUS_LABELS[status]}`,
+      },
+    ],
+  }));
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(18, 30, 0, 0);
@@ -219,22 +226,24 @@ export function createMockState(now = new Date()): ReceptionState {
 }
 
 function validSettings(value: Partial<ReservationSettings> | undefined): ReservationSettings {
-  const ok = (n: unknown, max: number) => typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= max;
+  const ok = (n: unknown, max: number) =>
+    typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= max;
   return {
-    bufferMinutes: ok(value?.bufferMinutes, 60) ? value!.bufferMinutes! : DEFAULT_SETTINGS.bufferMinutes,
-    noShowMinutes: ok(value?.noShowMinutes, 120) && value!.noShowMinutes! >= 5 ? value!.noShowMinutes! : DEFAULT_SETTINGS.noShowMinutes,
+    bufferMinutes: ok(value?.bufferMinutes, 60)
+      ? value!.bufferMinutes!
+      : DEFAULT_SETTINGS.bufferMinutes,
+    noShowMinutes:
+      ok(value?.noShowMinutes, 120) && value!.noShowMinutes! >= 5
+        ? value!.noShowMinutes!
+        : DEFAULT_SETTINGS.noShowMinutes,
   };
 }
 
 // Versioned storage; old demo dates are reseeded on the next launch, preserving
 // only the authenticated employee. No credentials are part of the stored state.
-export function restoreDemoState(
-  raw: unknown,
-  now = new Date(),
-): ReceptionState {
+export function restoreDemoState(raw: unknown, now = new Date()): ReceptionState {
   const fresh = createMockState(now);
-  if (!raw || typeof raw !== "object")
-    throw new Error("Dữ liệu lưu không hợp lệ.");
+  if (!raw || typeof raw !== "object") throw new Error("Dữ liệu lưu không hợp lệ.");
   const saved = raw as ReceptionState;
   if (
     saved.version !== 1 ||
@@ -254,7 +263,17 @@ export function restoreDemoState(
         r.status in STATUS_LABELS &&
         (r.email === undefined || typeof r.email === "string") &&
         (r.occasion === undefined || typeof r.occasion === "string") &&
-        (r.preorder === undefined || (Array.isArray(r.preorder) && r.preorder.every(p => p && typeof p.menuItemId === "string" && Number.isInteger(p.quantity) && p.quantity > 0 && p.quantity <= 99 && (p.note === undefined || (typeof p.note === "string" && p.note.length <= 300))))) &&
+        (r.preorder === undefined ||
+          (Array.isArray(r.preorder) &&
+            r.preorder.every(
+              (p) =>
+                p &&
+                typeof p.menuItemId === "string" &&
+                Number.isInteger(p.quantity) &&
+                p.quantity > 0 &&
+                p.quantity <= 99 &&
+                (p.note === undefined || (typeof p.note === "string" && p.note.length <= 300)),
+            ))) &&
         r.customer &&
         typeof r.customer.name === "string" &&
         typeof r.customer.phone === "string" &&
@@ -265,10 +284,7 @@ export function restoreDemoState(
         r.duration >= 15 &&
         Array.isArray(r.history) &&
         r.history.every(
-          (h) =>
-            h &&
-            typeof h.text === "string" &&
-            Number.isFinite(new Date(h.at).getTime()),
+          (h) => h && typeof h.text === "string" && Number.isFinite(new Date(h.at).getTime()),
         ),
     ) ||
     !saved.tables.every(
@@ -279,9 +295,7 @@ export function restoreDemoState(
         Number.isInteger(t.capacity) &&
         t.capacity > 0,
     ) ||
-    !saved.areas.every(
-      (a) => a && typeof a.id === "string" && typeof a.name === "string",
-    ) ||
+    !saved.areas.every((a) => a && typeof a.id === "string" && typeof a.name === "string") ||
     !saved.notifications.every(
       (n) =>
         n &&
@@ -300,17 +314,22 @@ export function restoreDemoState(
   )
     throw new Error("Nội dung dữ liệu demo không hợp lệ.");
   // Restore only known demo identities, never a role supplied in storage.
-  const known = [DEMO_STAFF, DEMO_WAITER, OTHER_WAITER].find((s) => s.id === saved.session?.id && s.role === saved.session?.role);
+  const known = [DEMO_STAFF, DEMO_WAITER, OTHER_WAITER].find(
+    (s) => s.id === saved.session?.id && s.role === saved.session?.role,
+  );
   const session = known ? { ...known } : null;
   if (saved.seedDay !== fresh.seedDay) return { ...fresh, session };
-  const upgraded = saved.serviceVersion === undefined
-    ? { ...saved, ...emptyServiceData(DEMO_STAFF), session, settings: { ...DEFAULT_SETTINGS } }
-    : { ...saved, session, settings: validSettings(saved.settings) };
+  const upgraded =
+    saved.serviceVersion === undefined
+      ? { ...saved, ...emptyServiceData(DEMO_STAFF), session, settings: { ...DEFAULT_SETTINGS } }
+      : { ...saved, session, settings: validSettings(saved.settings) };
   syncHandovers(upgraded);
-  if (!isValidServiceData(upgraded)) throw new Error("Dữ liệu phục vụ lưu trên thiết bị không hợp lệ.");
+  if (!isValidServiceData(upgraded))
+    throw new Error("Dữ liệu phục vụ lưu trên thiết bị không hợp lệ.");
   // Add the new demo seafood selection without changing saved prices, orders or availability.
   for (const category of fresh.menuCategories) {
-    if (!upgraded.menuCategories.some((c) => c.id === category.id)) upgraded.menuCategories.push(category);
+    if (!upgraded.menuCategories.some((c) => c.id === category.id))
+      upgraded.menuCategories.push(category);
   }
   for (const item of fresh.menuItems) {
     if (!upgraded.menuItems.some((m) => m.id === item.id)) upgraded.menuItems.push(item);

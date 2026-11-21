@@ -1,8 +1,4 @@
-export type TableStatus =
-  | "AVAILABLE"
-  | "OCCUPIED"
-  | "CLEANING"
-  | "OUT_OF_SERVICE";
+export type TableStatus = "AVAILABLE" | "OCCUPIED" | "CLEANING" | "OUT_OF_SERVICE";
 export interface RestaurantArea {
   id: string;
   name: string;

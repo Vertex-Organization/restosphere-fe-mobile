@@ -14,9 +14,7 @@ export function Field({
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 6 }}>
-      <Text style={ui.label}>
-        {label}
-      </Text>
+      <Text style={ui.label}>{label}</Text>
       <View
         style={{
           flexDirection: "row",
@@ -33,8 +31,14 @@ export function Field({
           accessibilityLabel={label}
           placeholderTextColor={colors.subtle}
           {...props}
-          onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
-          onBlur={(e) => { setFocused(false); props.onBlur?.(e); }}
+          onFocus={(e) => {
+            setFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            props.onBlur?.(e);
+          }}
           style={[
             {
               minHeight: 48,

@@ -17,16 +17,40 @@ export interface WaiterNotification {
   id: string;
   sessionId?: string;
   waiterId?: string;
-  kind: "HANDOVER" | "READY" | "TABLE_REASSIGNED" | "MENU_AVAILABILITY" | "ITEM_REJECTED" | "PAYMENT" | "PAYMENT_RETURNED" | "PAYMENT_VOIDED" | "BILL_UPDATED" | "TABLE" | "INCIDENT" | "REQUEST_DECIDED";
+  kind:
+    | "HANDOVER"
+    | "READY"
+    | "TABLE_REASSIGNED"
+    | "MENU_AVAILABILITY"
+    | "ITEM_REJECTED"
+    | "PAYMENT"
+    | "PAYMENT_RETURNED"
+    | "PAYMENT_VOIDED"
+    | "BILL_UPDATED"
+    | "TABLE"
+    | "INCIDENT"
+    | "REQUEST_DECIDED";
   title: string;
   body: string;
   at: string;
   readBy: string[];
 }
 export interface CancelItemRequest {
-  id: string; code: string; type: "CANCEL_ITEM"; status: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN";
-  targetType: "ORDER_ITEM"; targetId: string; itemId: string; sessionId: string; amount: number;
-  reason: string; requestedBy: string; requestedAt: string; decidedBy?: string; decidedAt?: string; decisionNote?: string;
+  id: string;
+  code: string;
+  type: "CANCEL_ITEM";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN";
+  targetType: "ORDER_ITEM";
+  targetId: string;
+  itemId: string;
+  sessionId: string;
+  amount: number;
+  reason: string;
+  requestedBy: string;
+  requestedAt: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  decisionNote?: string;
 }
 export interface ServiceData {
   serviceVersion: 1;
@@ -40,7 +64,15 @@ export interface ServiceData {
   bills: Bill[];
   waiterNotifications: WaiterNotification[];
   requests: CancelItemRequest[];
-  outbox: { id: string; kind: "APPROVAL" | "CANCELLED" | "PRIORITY" | "PAYMENT_REQUEST" | "PAYMENT_REQUEST_WITHDRAWN"; audience: "MANAGER" | "KITCHEN" | "CASHIER"; targetId: string; at: string; title: string; body: string }[];
+  outbox: {
+    id: string;
+    kind: "APPROVAL" | "CANCELLED" | "PRIORITY" | "PAYMENT_REQUEST" | "PAYMENT_REQUEST_WITHDRAWN";
+    audience: "MANAGER" | "KITCHEN" | "CASHIER";
+    targetId: string;
+    at: string;
+    title: string;
+    body: string;
+  }[];
 }
 export type WaiterCommand =
   | { type: "accept"; sessionId: string }

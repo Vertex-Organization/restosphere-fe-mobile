@@ -16,7 +16,14 @@ const server = http.createServer(async (req, res) => {
       const state = createMockState(new Date());
       state.session = { ...DEMO_WAITER };
       // A persisted draft exercises cart/note UI without changing product fixtures.
-      state.drafts.push({ id: "review-draft", sessionId: "waiter-s0", waiterId: DEMO_WAITER.id, menuItemId: "beef", quantity: 2, note: "Không hành, ít cay" });
+      state.drafts.push({
+        id: "review-draft",
+        sessionId: "waiter-s0",
+        waiterId: DEMO_WAITER.id,
+        menuItemId: "beef",
+        quantity: 2,
+        note: "Không hành, ít cay",
+      });
       const setup = `if (!localStorage.getItem('restosphere.waiter.review.seed')) { localStorage.setItem('restosphere.staff.demo.v1', ${JSON.stringify(JSON.stringify(state))}); localStorage.setItem('restosphere.waiter.review.seed', '1'); }`;
       body = Buffer.from(body.toString().replace("<head>", `<head><script>${setup}</script>`));
     }
@@ -27,4 +34,6 @@ const server = http.createServer(async (req, res) => {
     res.end(String(error));
   }
 });
-server.listen(8093, "127.0.0.1", () => console.log("Waiter visual review: http://127.0.0.1:8093/waiter/overview"));
+server.listen(8093, "127.0.0.1", () =>
+  console.log("Waiter visual review: http://127.0.0.1:8093/waiter/overview"),
+);

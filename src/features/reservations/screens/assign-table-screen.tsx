@@ -2,13 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
-import {
-  Button,
-  ConfirmDialog,
-  EmptyState,
-  Message,
-  ui,
-} from "@/components/ui";
+import { Button, ConfirmDialog, EmptyState, Message, ui } from "@/components/ui";
 import { TableItem } from "@/features/tables/components/table-item";
 import { tableCode } from "@/features/tables/labels";
 import { useApp } from "@/store/app-store";
@@ -23,7 +17,9 @@ export default function AssignTableScreen() {
   const r = state.reservations.find((item) => item.id === id);
   if (
     !r ||
-    !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes("assign")
+    !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(
+      "assign",
+    )
   )
     return (
       <Screen>
@@ -54,13 +50,12 @@ export default function AssignTableScreen() {
               {dateTimeLabel(r.arrivedAt ?? r.startsAt)} · {r.duration} phút
             </Text>
             <Text style={ui.muted}>
-              Bàn hiện tại: {r.tableId ? tableCode(state.tables, r.tableId) : "Chưa gán"}. Không hỗ trợ ghép bàn.
+              Bàn hiện tại: {r.tableId ? tableCode(state.tables, r.tableId) : "Chưa gán"}. Không hỗ
+              trợ ghép bàn.
             </Text>
             {!!error && <Message>{error}</Message>}
             {!checks.some((item) => item.check.ok) && (
-              <Message>
-                Chưa có bàn phù hợp. Các lý do được hiển thị bên dưới.
-              </Message>
+              <Message>Chưa có bàn phù hợp. Các lý do được hiển thị bên dưới.</Message>
             )}
             <Button
               title={
@@ -97,8 +92,7 @@ export default function AssignTableScreen() {
           onConfirm={async () => {
             try {
               await run({ type: "assign", id: r.id, tableId: selected });
-              if (r.status === "ARRIVED")
-                router.replace(`/reception/handover?id=${r.id}`);
+              if (r.status === "ARRIVED") router.replace(`/reception/handover?id=${r.id}`);
               else if (router.canGoBack()) router.back();
               else router.replace(`/reception/reservations/${r.id}`);
             } catch (e) {

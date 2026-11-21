@@ -3,12 +3,7 @@ import { colors, radius } from "@/theme";
 import { dayKey, timeLabel } from "@/utils/dates";
 import type { DateFieldProps } from "./date-field";
 import { ui } from "./styles";
-export function DateField({
-  label,
-  value,
-  onChange,
-  mode = "date",
-}: DateFieldProps) {
+export function DateField({ label, value, onChange, mode = "date" }: DateFieldProps) {
   return (
     <View style={{ gap: 6 }}>
       <Text style={ui.label}>{label}</Text>

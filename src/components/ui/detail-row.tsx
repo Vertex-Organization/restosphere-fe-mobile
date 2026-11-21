@@ -2,13 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { colors } from "@/theme";
 import { ui } from "./styles";
 
-export function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | number;
-}) {
+export function DetailRow({ label, value }: { label: string; value?: string | number }) {
   return (
     <View
       style={{

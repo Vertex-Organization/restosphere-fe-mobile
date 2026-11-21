@@ -1,7 +1,13 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { createMockState, restoreDemoState } = require("../.cache/tests/tests/fixtures/demo-data.js");
-const { DEMO_WAITER, isValidServiceData } = require("../.cache/tests/tests/fixtures/waiter-data.js");
+const {
+  createMockState,
+  restoreDemoState,
+} = require("../.cache/tests/tests/fixtures/demo-data.js");
+const {
+  DEMO_WAITER,
+  isValidServiceData,
+} = require("../.cache/tests/tests/fixtures/waiter-data.js");
 const { sessionItems } = require("../.cache/tests/src/features/waiter/selectors.js");
 
 test("service demo fixtures respect table capacity and chronological transitions", () => {
@@ -32,13 +38,32 @@ function legacyCatalogState() {
   state.session = { ...DEMO_WAITER };
   state.menuCategories = state.menuCategories.filter((category) => category.id !== "seafood");
   state.menuItems = state.menuItems.filter((item) => !seafoodIds.includes(item.id));
-  Object.assign(state.menuItems.find((item) => item.id === "seafood-rice"), {
-    price: 117000, status: "SOLD_OUT", notes: "Hết nguyên liệu, giữ giá đã cập nhật trong ca.",
-  });
+  Object.assign(
+    state.menuItems.find((item) => item.id === "seafood-rice"),
+    {
+      price: 117000,
+      status: "SOLD_OUT",
+      notes: "Hết nguyên liệu, giữ giá đã cập nhật trong ca.",
+    },
+  );
   state.menuCategories.find((category) => category.id === "rice").name = "Cơm và mì tại bếp";
   state.menuCategories.push({ id: "staff-special", name: "Món riêng trong ca" });
-  state.menuItems.push({ id: "staff-special-item", name: "Món riêng của bếp", price: 125000, categoryId: "staff-special", status: "AVAILABLE", notes: "Giữ nội dung đã lưu." });
-  state.drafts.push({ id: "saved-draft", sessionId: "waiter-s0", waiterId: DEMO_WAITER.id, menuItemId: "water", quantity: 3, note: "Không lạnh, mang cùng món chính." });
+  state.menuItems.push({
+    id: "staff-special-item",
+    name: "Món riêng của bếp",
+    price: 125000,
+    categoryId: "staff-special",
+    status: "AVAILABLE",
+    notes: "Giữ nội dung đã lưu.",
+  });
+  state.drafts.push({
+    id: "saved-draft",
+    sessionId: "waiter-s0",
+    waiterId: DEMO_WAITER.id,
+    menuItemId: "water",
+    quantity: 3,
+    note: "Không lạnh, mang cùng món chính.",
+  });
   assert.ok(isValidServiceData(state), "the old catalog must be a valid saved state");
   return state;
 }
@@ -52,24 +77,50 @@ test("restoring a valid old catalog adds seafood without overwriting the saved s
   assert.ok(isValidServiceData(restored));
   assert.equal(restored.menuCategories.length, before.menuCategories.length + 1);
   assert.equal(restored.menuItems.length, before.menuItems.length + seafoodIds.length);
-  assert.deepEqual(restored.menuCategories.find((category) => category.id === "seafood"), fresh.menuCategories.find((category) => category.id === "seafood"));
+  assert.deepEqual(
+    restored.menuCategories.find((category) => category.id === "seafood"),
+    fresh.menuCategories.find((category) => category.id === "seafood"),
+  );
   for (const id of seafoodIds) {
-    assert.deepEqual(restored.menuItems.find((item) => item.id === id), fresh.menuItems.find((item) => item.id === id));
+    assert.deepEqual(
+      restored.menuItems.find((item) => item.id === id),
+      fresh.menuItems.find((item) => item.id === id),
+    );
   }
   for (const category of before.menuCategories) {
-    assert.deepEqual(restored.menuCategories.find((item) => item.id === category.id), category);
+    assert.deepEqual(
+      restored.menuCategories.find((item) => item.id === category.id),
+      category,
+    );
   }
   for (const item of before.menuItems) {
-    assert.deepEqual(restored.menuItems.find((restoredItem) => restoredItem.id === item.id), item, `preserve saved price, stock and notes for ${item.id}`);
+    assert.deepEqual(
+      restored.menuItems.find((restoredItem) => restoredItem.id === item.id),
+      item,
+      `preserve saved price, stock and notes for ${item.id}`,
+    );
   }
-  for (const key of ["orders", "orderItems", "drafts", "bills", "tableSessions", "tables", "reservations", "waiterNotifications", "nextId"]) {
+  for (const key of [
+    "orders",
+    "orderItems",
+    "drafts",
+    "bills",
+    "tableSessions",
+    "tables",
+    "reservations",
+    "waiterNotifications",
+    "nextId",
+  ]) {
     assert.deepEqual(restored[key], before[key], `preserve ${key} rather than reseeding the shift`);
   }
 });
 
 test("catalog migration is idempotent and preserves existing seafood edits", () => {
   const restored = restoreDemoState(legacyCatalogState(), migrationDate);
-  Object.assign(restored.menuItems.find((item) => item.id === "grilled-shrimp"), { price: 231000, status: "SOLD_OUT" });
+  Object.assign(
+    restored.menuItems.find((item) => item.id === "grilled-shrimp"),
+    { price: 231000, status: "SOLD_OUT" },
+  );
   const snapshot = structuredClone(restored);
   // Go through the actual JSON persistence boundary on each launch.
   let reopened = restoreDemoState(JSON.parse(JSON.stringify(restored)), migrationDate);
@@ -77,6 +128,9 @@ test("catalog migration is idempotent and preserves existing seafood edits", () 
 
   assert.ok(isValidServiceData(reopened));
   assert.deepEqual(JSON.parse(JSON.stringify(reopened)), JSON.parse(JSON.stringify(snapshot)));
-  assert.equal(new Set(reopened.menuCategories.map((category) => category.id)).size, reopened.menuCategories.length);
+  assert.equal(
+    new Set(reopened.menuCategories.map((category) => category.id)).size,
+    reopened.menuCategories.length,
+  );
   assert.equal(new Set(reopened.menuItems.map((item) => item.id)).size, reopened.menuItems.length);
 });

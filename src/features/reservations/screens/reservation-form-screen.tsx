@@ -16,6 +16,7 @@ import {
 import { TableItem } from "@/features/tables/components/table-item";
 import { useApp } from "@/store/app-store";
 import { addMinutes } from "@/utils/dates";
+import {
   getAvailableTables,
   getReservationActions,
   isTableAvailableForTimeRange,
@@ -29,7 +30,10 @@ export default function ReservationFormScreen() {
   const r = state.reservations.find((item) => item.id === id);
   if (
     id &&
-    (!r || !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes("edit"))
+    (!r ||
+      !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(
+        "edit",
+      ))
   )
     return (
       <Screen>
@@ -55,9 +59,7 @@ function ReservationForm({
   const { state, now, run } = useApp();
   const [name, setName] = useState(r?.customer.name ?? "");
   const [phone, setPhone] = useState(r?.customer.phone ?? "");
-  const [date, setDate] = useState(
-    r ? new Date(r.startsAt) : addMinutes(now, 60),
-  );
+  const [date, setDate] = useState(r ? new Date(r.startsAt) : addMinutes(now, 60));
   const [guests, setGuests] = useState(String(r?.guests ?? 2));
   const [duration, setDuration] = useState(String(r?.duration ?? 90));
   const [areaId, setArea] = useState(r?.areaId ?? "");
@@ -112,7 +114,11 @@ function ReservationForm({
     );
     setErrors(validation);
     setError("");
-    if ((!walkIn && !name.trim()) || !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s().-]/g, "")) || !areaId)
+    if (
+      (!walkIn && !name.trim()) ||
+      !/^\+?[0-9]{8,15}$/.test(phone.replace(/[\s().-]/g, "")) ||
+      !areaId
+    )
       return setError("Nhập tên khách, số điện thoại hợp lệ và chọn khu vực.");
     if (Object.keys(validation).length)
       return setError("Kiểm tra các trường được đánh dấu bên dưới.");
@@ -120,8 +126,7 @@ function ReservationForm({
       const id = r
         ? (await run({ type: "edit", id: r.id, input: actualInput }), r.id)
         : await run({ type: "create", input: actualInput, walkIn });
-      if (id)
-        router.replace(`/reception/reservations/${id}`);
+      if (id) router.replace(`/reception/reservations/${id}`);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -130,11 +135,7 @@ function ReservationForm({
     <Screen>
       <Stack.Screen
         options={{
-          title: walkIn
-            ? "Khách trực tiếp"
-            : r
-              ? `Sửa ${r.code}`
-              : "Tạo đặt bàn",
+          title: walkIn ? "Khách trực tiếp" : r ? `Sửa ${r.code}` : "Tạo đặt bàn",
         }}
       />
       <Text style={ui.heading}>
@@ -146,7 +147,7 @@ function ReservationForm({
       </Text>
       <Text style={ui.muted}>
         {walkIn
-            ? "Chọn bàn sẵn sàng. Khách được ghi nhận đã đến, sau đó bàn giao cho phục vụ."
+          ? "Chọn bàn sẵn sàng. Khách được ghi nhận đã đến, sau đó bàn giao cho phục vụ."
           : "Lịch mới ở trạng thái chờ xác nhận và chưa giữ bàn."}
       </Text>
       {!!error && <Message>{error}</Message>}
@@ -200,30 +201,18 @@ function ReservationForm({
         ]}
       />
       <Field label="Ghi chú" value={notes} onChangeText={setNotes} multiline />
-      <Field
-        label="Yêu cầu đặc biệt"
-        value={specialRequests}
-        onChangeText={setSpecial}
-        multiline
-      />
+      <Field label="Yêu cầu đặc biệt" value={specialRequests} onChangeText={setSpecial} multiline />
       {walkIn ? (
         <Section title="Chọn bàn sẵn sàng">
           {!available.length && (
             <Message>
-              Không có bàn sẵn sàng đủ sức chứa và không trùng lịch. Chưa thể
-              tiếp nhận khách.
+              Không có bàn sẵn sàng đủ sức chứa và không trùng lịch. Chưa thể tiếp nhận khách.
             </Message>
           )}
           {state.tables
             .filter((t) => !areaId || t.areaId === areaId)
             .map((t) => {
-              const check = isTableAvailableForTimeRange(
-                state,
-                t,
-                input,
-                undefined,
-                now,
-              );
+              const check = isTableAvailableForTimeRange(state, t, input, undefined, now);
               return (
                 <TableItem
                   key={t.id}
@@ -249,10 +238,7 @@ function ReservationForm({
           options={[
             {
               value: "",
-              label:
-                r?.status === "CONFIRMED"
-                  ? "Cần chọn một bàn để giữ chỗ"
-                  : "Chưa gán bàn",
+              label: r?.status === "CONFIRMED" ? "Cần chọn một bàn để giữ chỗ" : "Chưa gán bàn",
             },
             ...(invalidSelected
               ? [
@@ -269,13 +255,11 @@ function ReservationForm({
           ]}
         />
       )}
-      {selectedCheck && !selectedCheck.ok && (
-        <Message>{selectedCheck.reason}</Message>
-      )}
+      {selectedCheck && !selectedCheck.ok && <Message>{selectedCheck.reason}</Message>}
       {!available.length && !walkIn && (
         <Message>
-          Không có bàn phù hợp khung giờ và số khách hiện tại. Hãy điều chỉnh
-          thông tin trước khi lưu.
+          Không có bàn phù hợp khung giờ và số khách hiện tại. Hãy điều chỉnh thông tin trước khi
+          lưu.
         </Message>
       )}
       <Button
@@ -283,20 +267,14 @@ function ReservationForm({
         disabled={blocked || (walkIn ? !tableId || invalidSelected : invalidSelected)}
         onPress={save}
       />
-      <Button
-        title="Hủy thao tác"
-        variant="secondary"
-        onPress={() => setDiscard(true)}
-      />
+      <Button title="Hủy thao tác" variant="secondary" onPress={() => setDiscard(true)} />
       {discard && (
         <ConfirmDialog
           title="Hủy thao tác"
           message="Bỏ nội dung chưa lưu và quay lại?"
           onCancel={() => setDiscard(false)}
           onConfirm={() =>
-            router.canGoBack()
-              ? router.back()
-              : router.replace("/reception/bookings")
+            router.canGoBack() ? router.back() : router.replace("/reception/bookings")
           }
         />
       )}

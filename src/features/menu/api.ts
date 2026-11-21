@@ -9,8 +9,10 @@ async function get<T>(path: string): Promise<T> {
   try {
     const response = await fetch(`${base}/menu/${path}`, { signal: controller.signal });
     if (!response.ok) throw new Error("Không tải được thực đơn từ máy chủ.");
-    return await response.json() as T;
-  } finally { clearTimeout(timer); }
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function loadMenu() {
@@ -18,5 +20,8 @@ export async function loadMenu() {
     get<MenuCategory[]>("categories"),
     get<(Omit<MenuItem, "notes"> & { description: string | null })[]>("items"),
   ]);
-  return { menuCategories, menuItems: items.map(item => ({ ...item, notes: item.description ?? "" })) };
+  return {
+    menuCategories,
+    menuItems: items.map((item) => ({ ...item, notes: item.description ?? "" })),
+  };
 }

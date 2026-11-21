@@ -15,12 +15,7 @@ export const timeLabel = (value: Date | string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
-export const dateLabel = (value: Date | string) =>
-  new Date(value).toLocaleDateString("vi-VN");
-export const dateTimeLabel = (value: Date | string) =>
-  `${timeLabel(value)} · ${dateLabel(value)}`;
+export const dateLabel = (value: Date | string) => new Date(value).toLocaleDateString("vi-VN");
+export const dateTimeLabel = (value: Date | string) => `${timeLabel(value)} · ${dateLabel(value)}`;
 export const lateMinutes = (r: { startsAt: string }, now: Date) =>
-  Math.max(
-    0,
-    Math.floor((now.getTime() - new Date(r.startsAt).getTime()) / 60_000),
-  );
+  Math.max(0, Math.floor((now.getTime() - new Date(r.startsAt).getTime()) / 60_000));

@@ -14,13 +14,30 @@ export default function ProfileScreen() {
     <Screen tabbed>
       <StaffProfile staff={state.session!}>
         <View style={{ borderRadius: radius.control, overflow: "hidden" }}>
-          <ProfileAction title="Xem thông báo" icon="notifications-outline" onPress={() => router.push("/reception/notifications")} />
+          <ProfileAction
+            title="Xem thông báo"
+            icon="notifications-outline"
+            onPress={() => router.push("/reception/notifications")}
+          />
         </View>
       </StaffProfile>
       <DeviceDataNote />
-      <Button title="Đăng xuất" icon="log-out-outline" variant="danger" onPress={() => setConfirm(true)} />
-      {confirm && <ConfirmDialog title="Đăng xuất" message="Kết thúc phiên làm việc trên thiết bị này? Dữ liệu nghiệp vụ vẫn được giữ trên máy chủ."
-        onCancel={() => setConfirm(false)} onConfirm={() => { void signOut(); }} />}
+      <Button
+        title="Đăng xuất"
+        icon="log-out-outline"
+        variant="danger"
+        onPress={() => setConfirm(true)}
+      />
+      {confirm && (
+        <ConfirmDialog
+          title="Đăng xuất"
+          message="Kết thúc phiên làm việc trên thiết bị này? Dữ liệu nghiệp vụ vẫn được giữ trên máy chủ."
+          onCancel={() => setConfirm(false)}
+          onConfirm={() => {
+            void signOut();
+          }}
+        />
+      )}
     </Screen>
   );
 }

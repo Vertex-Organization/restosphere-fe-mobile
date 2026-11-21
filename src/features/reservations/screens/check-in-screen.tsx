@@ -2,17 +2,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
-import {
-  Button,
-  EmptyState,
-  Field,
-  Message,
-  SearchInput,
-  ui,
-} from "@/components/ui";
+import { Button, EmptyState, Field, Message, SearchInput, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { ReservationListItem } from "../components/reservation-list-item";
+import {
   canCheckIn,
   getAvailableTables,
   isTableAvailableForTimeRange,
@@ -34,9 +28,7 @@ export default function CheckInScreen() {
     );
   const results = state.reservations
     .filter((r) => r.status === "CONFIRMED" && matchesReservation(r, query))
-    .sort(
-      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
-    );
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   return (
     <Screen scroll={false}>
       <FlatList
@@ -93,11 +85,17 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
         now,
       )
     : undefined;
-  const needsTable =
-    !table || !availability?.ok || table.status !== "AVAILABLE";
+  const needsTable = !table || !availability?.ok || table.status !== "AVAILABLE";
   // Without a fitting free table now, the party can only be seated by splitting it or asking the manager.
-  const noFittingTable = !badCount && needsTable && !getAvailableTables(state, { ...r, startsAt: now.toISOString(), guests: actualCount }, r.id, now)
-    .some((t) => t.status === "AVAILABLE");
+  const noFittingTable =
+    !badCount &&
+    needsTable &&
+    !getAvailableTables(
+      state,
+      { ...r, startsAt: now.toISOString(), guests: actualCount },
+      r.id,
+      now,
+    ).some((t) => t.status === "AVAILABLE");
   return (
     <Screen>
       <Text style={ui.heading}>
@@ -120,8 +118,8 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
       />
       {tooMany && (
         <Message>
-          Số khách vượt sức chứa bàn {table.code}. Có thể ghi nhận khách đã đến,
-          nhưng cần đổi bàn phù hợp trước khi bàn giao.
+          Số khách vượt sức chứa bàn {table.code}. Có thể ghi nhận khách đã đến, nhưng cần đổi bàn
+          phù hợp trước khi bàn giao.
         </Message>
       )}
       {!table && (
@@ -131,14 +129,14 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
       )}
       {!tooMany && availability && !availability.ok && (
         <Message>
-          {availability.reason} Có thể ghi nhận khách đã đến, sau đó chọn bàn
-          khác trước khi bàn giao.
+          {availability.reason} Có thể ghi nhận khách đã đến, sau đó chọn bàn khác trước khi bàn
+          giao.
         </Message>
       )}
       {noFittingTable && (
         <Message>
-          Hiện không còn bàn trống nào đủ chỗ cho {actualCount} khách trong khu này. Hãy chờ bàn trống,
-          đổi khu hoặc nhờ quản lý duyệt ở màn chi tiết lịch đặt.
+          Hiện không còn bàn trống nào đủ chỗ cho {actualCount} khách trong khu này. Hãy chờ bàn
+          trống, đổi khu hoặc nhờ quản lý duyệt ở màn chi tiết lịch đặt.
         </Message>
       )}
       {!!error && <Message>{error}</Message>}

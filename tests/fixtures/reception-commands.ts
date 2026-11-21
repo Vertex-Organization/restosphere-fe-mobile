@@ -52,8 +52,7 @@ export function executeCommand(
     if (
       r.tableId === tableId &&
       state.assignments.some(
-        (a) =>
-          a.reservationId === r.id && a.tableId === tableId && !a.releasedAt,
+        (a) => a.reservationId === r.id && a.tableId === tableId && !a.releasedAt,
       )
     )
       return;
@@ -75,9 +74,17 @@ export function executeCommand(
   if (command.type === "request-exception") {
     const reason = command.reason.trim();
     if (reason.length < 5 || reason.length > 200) throw new Error("Lý do cần từ 5 đến 200 ký tự.");
-    const target = state.reservations.find(item => item.id === command.id);
+    const target = state.reservations.find((item) => item.id === command.id);
     if (!target) throw new Error("Không tìm thấy lịch đặt.");
-    state.outbox.unshift({ id: `out${id()}`, kind: "APPROVAL", audience: "MANAGER", targetId: target.id, at, title: `Yêu cầu phê duyệt đặt bàn ${target.code}`, body: reason });
+    state.outbox.unshift({
+      id: `out${id()}`,
+      kind: "APPROVAL",
+      audience: "MANAGER",
+      targetId: target.id,
+      at,
+      title: `Yêu cầu phê duyệt đặt bàn ${target.code}`,
+      body: reason,
+    });
     target.history.push({ at, text: `Gửi yêu cầu phê duyệt tới quản lý: ${reason}` });
     notify("Đã gửi yêu cầu tới Quản lý", target);
     return { state, reservationId: target.id };
@@ -86,28 +93,21 @@ export function executeCommand(
     const input = {
       ...command.input,
       customer: {
-        name:
-          command.input.customer.name.trim() ||
-          (command.walkIn ? "Khách trực tiếp" : ""),
+        name: command.input.customer.name.trim() || (command.walkIn ? "Khách trực tiếp" : ""),
         phone: command.input.customer.phone.trim(),
       },
       startsAt: command.walkIn ? at : command.input.startsAt,
     };
     const errors = validateReservationInput(input, now, true, command.walkIn);
-    if (Object.keys(errors).length)
-      throw new Error(Object.values(errors).join(" "));
+    if (Object.keys(errors).length) throw new Error(Object.values(errors).join(" "));
     if (!getAvailableTables(state, input, undefined, now).length)
-      throw new Error(
-        "Chưa có khả năng tiếp nhận: không có bàn phù hợp trong khung giờ này.",
-      );
+      throw new Error("Chưa có khả năng tiếp nhận: không có bàn phù hợp trong khung giờ này.");
     if (command.walkIn && !input.tableId)
       throw new Error("Chọn bàn sẵn sàng để tiếp nhận khách trực tiếp.");
     if (input.tableId) {
       const table = state.tables.find((t) => t.id === input.tableId);
       if (!table) throw new Error("Không tìm thấy bàn.");
-      assertRule(
-        isTableAvailableForTimeRange(state, table, input, undefined, now),
-      );
+      assertRule(isTableAvailableForTimeRange(state, table, input, undefined, now));
       if (command.walkIn && table.status !== "AVAILABLE")
         throw new Error("Bàn phải sẵn sàng để tiếp nhận ngay.");
     }
@@ -131,16 +131,17 @@ export function executeCommand(
     };
     state.reservations.unshift(r);
     if (r.tableId && command.walkIn) assign(r, r.tableId);
-    notify(
-      command.walkIn ? "Khách trực tiếp đã đến" : "Lịch mới chờ xác nhận",
-      r,
-    );
+    notify(command.walkIn ? "Khách trực tiếp đã đến" : "Lịch mới chờ xác nhận", r);
     return { state, reservationId };
   }
   const r = state.reservations.find((item) => item.id === command.id);
   if (!r) throw new Error("Không tìm thấy lịch đặt.");
   const action = command.type === "edit" ? "edit" : command.type;
-  if (!getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(action)) {
+  if (
+    !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(
+      action,
+    )
+  ) {
     if (command.type === "check-in") assertRule(canCheckIn(r));
     if (command.type === "no-show") assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
     throw new Error("Thao tác không được phép ở trạng thái hiện tại.");
@@ -148,8 +149,7 @@ export function executeCommand(
   switch (command.type) {
     case "confirm": {
       assertRule(canConfirmReservation(state, r, now));
-      const tableId =
-        r.tableId ?? getAvailableTables(state, r, r.id, now)[0]?.id;
+      const tableId = r.tableId ?? getAvailableTables(state, r, r.id, now)[0]?.id;
       if (!tableId) throw new Error("Không còn bàn phù hợp.");
       r.status = "CONFIRMED";
       assertRule(canAssignTable(state, r, tableId, now));
@@ -165,7 +165,8 @@ export function executeCommand(
     case "cancel":
     case "no-show": {
       if (!command.reason?.trim()) throw new Error("Vui lòng nhập lý do.");
-      if (command.type === "no-show") assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
+      if (command.type === "no-show")
+        assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
       r.status =
         command.type === "reject"
           ? "REJECTED"
@@ -191,16 +192,13 @@ export function executeCommand(
         now,
         command.input.startsAt !== r.startsAt,
       );
-      if (Object.keys(errors).length)
-        throw new Error(Object.values(errors).join(" "));
+      if (Object.keys(errors).length) throw new Error(Object.values(errors).join(" "));
       if (r.status === "CONFIRMED" && !command.input.tableId)
         throw new Error("Lịch đã xác nhận cần giữ một bàn. Hãy dùng Đổi bàn.");
       if (command.input.tableId) {
         const table = state.tables.find((t) => t.id === command.input.tableId);
         if (!table) throw new Error("Không tìm thấy bàn.");
-        assertRule(
-          isTableAvailableForTimeRange(state, table, command.input, r.id, now),
-        );
+        assertRule(isTableAvailableForTimeRange(state, table, command.input, r.id, now));
       } else if (!getAvailableTables(state, command.input, r.id, now).length)
         throw new Error("Không có bàn đáp ứng thông tin mới.");
       const oldTable = r.tableId;
@@ -235,12 +233,24 @@ export function executeCommand(
       const previous = r.tableId;
       assign(r, command.tableId);
       r.history.push({ at, text: `Gán bàn ${command.tableId}.` });
-      notify("Thay đổi bàn", r, previous && previous !== command.tableId ? "TABLE_REASSIGNED" : undefined);
+      notify(
+        "Thay đổi bàn",
+        r,
+        previous && previous !== command.tableId ? "TABLE_REASSIGNED" : undefined,
+      );
       const session = state.tableSessions.find((s) => s.reservationId === r.id && !s.closedAt);
       if (previous && previous !== command.tableId && session) {
         session.tableId = command.tableId;
-        state.waiterNotifications.unshift({ id: `wn${id()}`, sessionId: session.id, waiterId: session.waiterId, kind: "TABLE_REASSIGNED",
-          title: `Đổi bàn ${previous} → ${command.tableId}`, body: `${r.code} · ${r.customer.name}`, at, readBy: [] });
+        state.waiterNotifications.unshift({
+          id: `wn${id()}`,
+          sessionId: session.id,
+          waiterId: session.waiterId,
+          kind: "TABLE_REASSIGNED",
+          title: `Đổi bàn ${previous} → ${command.tableId}`,
+          body: `${r.code} · ${r.customer.name}`,
+          at,
+          readBy: [],
+        });
       }
       break;
     }

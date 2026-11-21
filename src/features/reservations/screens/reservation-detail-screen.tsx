@@ -15,10 +15,7 @@ import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { StatusBadge } from "../components/status-badge";
 import { SOURCE_LABELS } from "../labels";
-  canConfirmReservation,
-  getAvailableTables,
-  getReservationActions,
-} from "../rules";
+import { canConfirmReservation, getAvailableTables, getReservationActions } from "../rules";
 import type { ReservationAction } from "../types";
 const ACTION_LABELS: Record<ReservationAction, string> = {
   confirm: "Xác nhận",
@@ -33,9 +30,7 @@ const ACTION_LABELS: Record<ReservationAction, string> = {
 export default function ReservationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, now, run } = useApp();
-  const [dialog, setDialog] = useState<
-    "confirm" | "reject" | "cancel" | "no-show" | null
-  >(null);
+  const [dialog, setDialog] = useState<"confirm" | "reject" | "cancel" | "no-show" | null>(null);
   const [exceptionOpen, setExceptionOpen] = useState(false);
   const [error, setError] = useState("");
   const r = state.reservations.find((item) => item.id === id);
@@ -51,9 +46,16 @@ export default function ReservationDetailScreen() {
   const table = state.tables.find((t) => t.id === r.tableId);
   const area = state.areas.find((a) => a.id === table?.areaId);
   const actions = getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes);
-  const nextAction: ReservationAction | undefined = r.status === "PENDING" ? "confirm"
-    : r.status === "CONFIRMED" ? "check-in"
-    : r.status === "ARRIVED" ? (table ? "handover" : "assign") : undefined;
+  const nextAction: ReservationAction | undefined =
+    r.status === "PENDING"
+      ? "confirm"
+      : r.status === "CONFIRMED"
+        ? "check-in"
+        : r.status === "ARRIVED"
+          ? table
+            ? "handover"
+            : "assign"
+          : undefined;
   const primaryAction = nextAction && actions.includes(nextAction) ? nextAction : undefined;
   const otherActions = actions.filter((action) => action !== primaryAction);
   const candidate = r.tableId ? table?.code : getAvailableTables(state, r, r.id, now)[0]?.code;
@@ -63,12 +65,7 @@ export default function ReservationDetailScreen() {
       const check = canConfirmReservation(state, r!, new Date());
       if (!check.ok) return setError(check.reason);
     }
-    if (
-      action === "confirm" ||
-      action === "reject" ||
-      action === "cancel" ||
-      action === "no-show"
-    )
+    if (action === "confirm" || action === "reject" || action === "cancel" || action === "no-show")
       setDialog(action);
     else if (action === "edit") router.push(`/reception/reservations/form?id=${id}`);
     else if (action === "assign") router.push(`/reception/reservations/assign?id=${id}`);
@@ -83,23 +80,21 @@ export default function ReservationDetailScreen() {
       </View>
       <View style={{ gap: 4 }}>
         <Text style={ui.heading}>{r.customer.name}</Text>
-        <Text style={ui.muted}>{dateTimeLabel(r.startsAt)} · {r.actualGuests ?? r.guests} khách</Text>
+        <Text style={ui.muted}>
+          {dateTimeLabel(r.startsAt)} · {r.actualGuests ?? r.guests} khách
+        </Text>
       </View>
       {!!error && <Message>{error}</Message>}
-      {primaryAction && <Button title={ACTION_LABELS[primaryAction]} onPress={() => act(primaryAction)} />}
+      {primaryAction && (
+        <Button title={ACTION_LABELS[primaryAction]} onPress={() => act(primaryAction)} />
+      )}
       <View style={ui.panel}>
-        <DetailRow
-          label="Số điện thoại"
-          value={r.customer.phone || "Không cung cấp"}
-        />
+        <DetailRow label="Số điện thoại" value={r.customer.phone || "Không cung cấp"} />
         <DetailRow
           label="Khách dự kiến / thực tế"
           value={`${r.guests} / ${r.actualGuests ?? "Chưa đến"}`}
         />
-        <DetailRow
-          label="Thời lượng dự kiến"
-          value={`${r.duration} phút`}
-        />
+        <DetailRow label="Thời lượng dự kiến" value={`${r.duration} phút`} />
         <DetailRow
           label="Bàn / khu vực"
           value={table ? `${table.code} · ${area?.name}` : "Chưa gán bàn"}
@@ -113,9 +108,7 @@ export default function ReservationDetailScreen() {
         )}
         <DetailRow
           label="Khu vực mong muốn"
-          value={
-            state.areas.find((a) => a.id === r.areaId)?.name ?? "Không yêu cầu"
-          }
+          value={state.areas.find((a) => a.id === r.areaId)?.name ?? "Không yêu cầu"}
         />
         {r.email && <DetailRow label="Email" value={r.email} />}
         {r.occasion && <DetailRow label="Dịp đặc biệt" value={r.occasion} />}
@@ -132,19 +125,9 @@ export default function ReservationDetailScreen() {
         )}
         <DetailRow label="Nguồn đặt bàn" value={SOURCE_LABELS[r.source]} />
         <DetailRow label="Ghi chú" value={r.notes || "Không có"} />
-        <DetailRow
-          label="Yêu cầu đặc biệt"
-          value={r.specialRequests || "Không có"}
-        />
-        {r.arrivedAt && (
-          <DetailRow label="Khách đến lúc" value={dateTimeLabel(r.arrivedAt)} />
-        )}
-        {r.handedOverAt && (
-          <DetailRow
-            label="Bàn giao lúc"
-            value={dateTimeLabel(r.handedOverAt)}
-          />
-        )}
+        <DetailRow label="Yêu cầu đặc biệt" value={r.specialRequests || "Không có"} />
+        {r.arrivedAt && <DetailRow label="Khách đến lúc" value={dateTimeLabel(r.arrivedAt)} />}
+        {r.handedOverAt && <DetailRow label="Bàn giao lúc" value={dateTimeLabel(r.handedOverAt)} />}
         {r.reason && <DetailRow label="Lý do" value={r.reason} />}
       </View>
       {r.status === "PENDING" && (
@@ -162,22 +145,24 @@ export default function ReservationDetailScreen() {
           Lịch này chỉ để xem. Thanh toán và dọn bàn do phục vụ và thu ngân xử lý.
         </Message>
       )}
-      {!!otherActions.length && <Section title="Thao tác khác">
-        {otherActions.map((action) => (
-          <Button
-            key={action}
-            title={ACTION_LABELS[action]}
-            variant={
-              ["reject", "cancel", "no-show"].includes(action)
-                ? "danger"
-                : "secondary"
-            }
-            onPress={() => act(action)}
-          />
-        ))}
-      </Section>}
+      {!!otherActions.length && (
+        <Section title="Thao tác khác">
+          {otherActions.map((action) => (
+            <Button
+              key={action}
+              title={ACTION_LABELS[action]}
+              variant={["reject", "cancel", "no-show"].includes(action) ? "danger" : "secondary"}
+              onPress={() => act(action)}
+            />
+          ))}
+        </Section>
+      )}
       {["PENDING", "CONFIRMED", "ARRIVED"].includes(r.status) && (
-        <Button title="Nhờ quản lý duyệt" variant="secondary" onPress={() => setExceptionOpen(true)} />
+        <Button
+          title="Nhờ quản lý duyệt"
+          variant="secondary"
+          onPress={() => setExceptionOpen(true)}
+        />
       )}
       <Section title="Lịch sử">
         {r.history

@@ -1,9 +1,4 @@
-export type Role =
-  | "RECEPTIONIST"
-  | "WAITER"
-  | "KITCHEN"
-  | "CASHIER"
-  | "MANAGER";
+export type Role = "RECEPTIONIST" | "WAITER" | "KITCHEN" | "CASHIER" | "MANAGER";
 export interface Staff {
   id: string;
   name: string;

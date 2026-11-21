@@ -1,4 +1,5 @@
-export type OrderItemStatus = "DRAFT" | "SUBMITTED" | "PREPARING" | "READY" | "SERVED" | "REJECTED" | "CANCELLED" | "VOIDED";
+export type OrderItemStatus =
+  "DRAFT" | "SUBMITTED" | "PREPARING" | "READY" | "SERVED" | "REJECTED" | "CANCELLED" | "VOIDED";
 export interface Order {
   id: string;
   sessionId: string;

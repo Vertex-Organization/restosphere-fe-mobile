@@ -71,7 +71,13 @@ Desktop.ini
 /.cursor/
 /.windsurf/
 /.gemini/
-/.opencode/
+/.opencode/*.local.json
+/.opencode/*.local.jsonc
+/opencode.local.json
+/opencode.local.jsonc
+/AGENTS.local.md
+/CLAUDE.local.md
+/.local/
 /.github/skills/
 
 # Temporary files

@@ -108,7 +108,11 @@ function Sidebar(props: BottomTabBarProps) {
     <View
       style={[
         styles.sidebar,
-        { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 20, paddingLeft: insets.left + 16 },
+        {
+          paddingTop: insets.top + 28,
+          paddingBottom: insets.bottom + 20,
+          paddingLeft: insets.left + 16,
+        },
       ]}
     >
       <View style={styles.brand}>
@@ -132,7 +136,14 @@ function Sidebar(props: BottomTabBarProps) {
 }
 
 const styles = StyleSheet.create({
-  iconPill: { width: 48, height: 28, borderRadius: 10, justifyContent: "center", alignItems: "center", backgroundColor: "transparent" },
+  iconPill: {
+    width: 48,
+    height: 28,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
   iconPillActive: { backgroundColor: colors.primarySoft },
   sidebar: {
     width: layout.sidebarWidth,
@@ -153,7 +164,14 @@ const styles = StyleSheet.create({
     paddingStart: 0,
     paddingEnd: 0,
   },
-  account: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: radius.control, backgroundColor: colors.background },
+  account: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: radius.control,
+    backgroundColor: colors.background,
+  },
   accountText: { flex: 1, minWidth: 0 },
   accountRole: { ...typography.label, color: colors.ink },
   accountName: { ...typography.caption, color: colors.muted },

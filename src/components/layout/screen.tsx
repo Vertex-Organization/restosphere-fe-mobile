@@ -1,11 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Message, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
@@ -26,7 +20,11 @@ export function Screen({
   return (
     <SafeAreaView
       edges={
-        login ? ["top", "bottom", "left", "right"] : tabbed ? ["left", "right"] : ["bottom", "left", "right"]
+        login
+          ? ["top", "bottom", "left", "right"]
+          : tabbed
+            ? ["left", "right"]
+            : ["bottom", "left", "right"]
       }
       style={{
         flex: 1,
@@ -57,10 +55,7 @@ export function Screen({
         style={{ flex: 1 }}
       >
         {scroll ? (
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={ui.content}
-          >
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={ui.content}>
             {children}
           </ScrollView>
         ) : (

@@ -39,3 +39,11 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## File cá nhân và file dùng chung
+
+- File cá nhân gồm thiết lập IDE riêng, cấu hình agent riêng, cache, báo cáo chạy thử, file tạm và file hệ điều hành. Đặt báo cáo/cache cá nhân trong `/.local/`, file tạm trong `/.tmp/`; cấu hình agent riêng dùng `opencode.local.json`, `opencode.local.jsonc`, `.opencode/*.local.json`, `.opencode/*.local.jsonc` hoặc `AGENTS.local.md`. Đây là quy ước đặt tên để ignore, không bảo đảm công cụ tự nạp cấu hình.
+- File dùng chung phải giữ khả năng theo dõi: `AGENTS.md`, `README.md`, `.env.example`, cấu hình formatter, lockfile ứng dụng, source, test, seed, `scripts/`, `docs/`, cấu hình opencode dùng chung và workflow GitHub. Giữ quy tắc Expo phía trên; không mở rộng các ignore cũ để che file dùng chung. Không coi script chưa rõ mục đích (như `api-performance-probe.mjs`, `runtime-performance-probe.mjs`) là file cá nhân.
+- Không đọc/in bí mật hoặc sửa `.env`; không commit token, khóa ký hay mật khẩu.
+- `.gitignore` không bỏ theo dõi file đã tracked. Kiểm tra bằng `git ls-files -ci --exclude-standard` ở từng repo và báo các đường dẫn cần xem xét; **không chạy `git rm --cached` nếu chưa được chấp thuận rõ ràng**. Không xóa file hoặc thay đổi staging của người khác.
+- Khi sửa ignore, dùng `git check-ignore -v --no-index <đường-dẫn>` để kiểm tra cả file cá nhân và file dùng chung; xem diff trước khi kết luận. Agent chỉ commit khi được yêu cầu rõ ràng, không push.

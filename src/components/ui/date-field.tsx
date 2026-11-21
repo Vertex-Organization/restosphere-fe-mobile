@@ -11,12 +11,7 @@ export interface DateFieldProps {
   onChange(value: Date): void;
   mode?: "date" | "time";
 }
-export function DateField({
-  label,
-  value,
-  onChange,
-  mode = "date",
-}: DateFieldProps) {
+export function DateField({ label, value, onChange, mode = "date" }: DateFieldProps) {
   const [open, setOpen] = useState(false);
   return (
     <View style={{ gap: 6 }}>
@@ -42,11 +37,7 @@ export function DateField({
             onValueChange={(_event, date) => {
               const next = new Date(value);
               if (mode === "date")
-                next.setFullYear(
-                  date.getFullYear(),
-                  date.getMonth(),
-                  date.getDate(),
-                );
+                next.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
               else next.setHours(date.getHours(), date.getMinutes(), 0, 0);
               onChange(next);
               if (Platform.OS !== "ios") setOpen(false);
@@ -54,11 +45,7 @@ export function DateField({
             onDismiss={() => setOpen(false)}
           />
           {Platform.OS === "ios" && (
-            <Button
-              title="Xong"
-              variant="secondary"
-              onPress={() => setOpen(false)}
-            />
+            <Button title="Xong" variant="secondary" onPress={() => setOpen(false)} />
           )}
         </View>
       )}
