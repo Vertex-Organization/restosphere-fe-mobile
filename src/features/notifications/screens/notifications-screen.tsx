@@ -17,6 +17,7 @@ const KIND_CATEGORY: Record<string, string> = {
   RESERVATION_CANCELLED: "Khách hủy lịch",
   AUTO_NO_SHOW: "Khách không đến",
   HOLD_EXPIRED: "Hết giờ giữ bàn",
+  DEPOSIT_EXPIRED: "Quá hạn tiền cọc",
 };
 
 export default function NotificationsScreen() {

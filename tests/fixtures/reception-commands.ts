@@ -136,6 +136,13 @@ export function executeCommand(
   }
   const r = state.reservations.find((item) => item.id === command.id);
   if (!r) throw new Error("Không tìm thấy lịch đặt.");
+  if (command.type === "confirm-deposit") {
+    if (r.status !== "PENDING" || !r.deposit || r.deposit.paidAt)
+      throw new Error("Lịch này không có tiền cọc chờ xác nhận.");
+    r.deposit.paidAt = at;
+    r.history.push({ at, text: "Đã nhận tiền cọc" });
+    return { state, reservationId: r.id };
+  }
   const action = command.type === "edit" ? "edit" : command.type;
   if (
     !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(

@@ -32,6 +32,7 @@ export default function ReservationDetailScreen() {
   const { state, now, run } = useApp();
   const [dialog, setDialog] = useState<"confirm" | "reject" | "cancel" | "no-show" | null>(null);
   const [exceptionOpen, setExceptionOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
   const [error, setError] = useState("");
   const r = state.reservations.find((item) => item.id === id);
   if (!r)
@@ -119,6 +120,16 @@ export default function ReservationDetailScreen() {
               .join(", ")}
           />
         )}
+        {r.deposit && (
+          <DetailRow
+            label="Tiền cọc"
+            value={`${r.deposit.amount.toLocaleString("vi-VN")}đ · ${
+              r.deposit.paidAt
+                ? `đã nhận ${dateTimeLabel(r.deposit.paidAt)}`
+                : `chờ chuyển khoản "${r.deposit.reference}", hạn ${dateTimeLabel(r.deposit.dueAt)}`
+            }`}
+          />
+        )}
         <DetailRow label="Nguồn đặt bàn" value={SOURCE_LABELS[r.source]} />
         <DetailRow label="Ghi chú" value={r.notes || "Không có"} />
         <DetailRow label="Yêu cầu đặc biệt" value={r.specialRequests || "Không có"} />
@@ -126,10 +137,34 @@ export default function ReservationDetailScreen() {
         {r.handedOverAt && <DetailRow label="Bàn giao lúc" value={dateTimeLabel(r.handedOverAt)} />}
         {r.reason && <DetailRow label="Lý do" value={r.reason} />}
       </View>
+      {r.status === "PENDING" && r.deposit && !r.deposit.paidAt && (
+        <>
+          <Message kind="info">
+            Khách cần chuyển cọc với nội dung “{r.deposit.reference}”. Kiểm tra tài khoản ngân hàng
+            rồi bấm “Đã nhận cọc”; quá hạn lịch sẽ tự hủy.
+          </Message>
+          <Button title="Đã nhận cọc" onPress={() => setDepositOpen(true)} />
+        </>
+      )}
       {r.status === "PENDING" && (
         <Message kind="info">
           Lịch chưa được giữ bàn. Khi xác nhận, hệ thống sẽ tự giữ một bàn phù hợp.
         </Message>
+      )}
+      {depositOpen && r.deposit && (
+        <ConfirmDialog
+          title="Xác nhận đã nhận cọc"
+          message={`Đã nhận ${r.deposit.amount.toLocaleString("vi-VN")}đ với nội dung “${r.deposit.reference}” cho ${r.code}?`}
+          onCancel={() => setDepositOpen(false)}
+          onConfirm={async () => {
+            try {
+              await run({ type: "confirm-deposit", id: r.id });
+            } catch (e) {
+              setError((e as Error).message);
+            }
+            setDepositOpen(false);
+          }}
+        />
       )}
       {r.status === "CONFIRMED" && (
         <Text style={ui.muted}>

@@ -85,6 +85,14 @@ export function ReservationListItem({
           <StatusBadge status={r.status} />
           <Text style={[ui.caption, { fontVariant: ["tabular-nums"] }]}>{r.code}</Text>
         </View>
+        {r.status === "PENDING" && r.deposit && !r.deposit.paidAt && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <AppIcon name="cash-outline" size={14} color={colors.warning} />
+            <Text style={[ui.caption, { color: colors.warning }]}>
+              Chờ cọc {r.deposit.amount.toLocaleString("vi-VN")}đ
+            </Text>
+          </View>
+        )}
         {late > 0 && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             <AppIcon name="alert-circle-outline" size={14} color={colors.warning} />

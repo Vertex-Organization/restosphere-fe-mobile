@@ -5,7 +5,8 @@ export type ReceptionNotificationKind =
   | "REQUEST_DECIDED"
   | "RESERVATION_CANCELLED"
   | "AUTO_NO_SHOW"
-  | "HOLD_EXPIRED";
+  | "HOLD_EXPIRED"
+  | "DEPOSIT_EXPIRED";
 export interface ReceptionNotification {
   id: string;
   kind?: ReceptionNotificationKind;

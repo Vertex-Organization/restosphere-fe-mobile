@@ -43,7 +43,16 @@ export interface Reservation extends ReservationInput {
   arrivedAt?: string;
   handedOverAt?: string;
   reason?: string;
+  deposit?: Deposit;
   history: { at: string; text: string }[];
+}
+export interface Deposit {
+  /** Whole VND. */
+  amount: number;
+  dueAt: string;
+  paidAt?: string;
+  /** Transfer note the customer was told to use. */
+  reference: string;
 }
 export interface TableAssignment {
   id: string;
@@ -89,5 +98,6 @@ export type ReceptionCommand =
   | { type: "assign"; id: string; tableId: string }
   | { type: "check-in"; id: string; actualGuests: number }
   | { type: "handover"; id: string }
+  | { type: "confirm-deposit"; id: string }
   | { type: "read"; id?: string };
 export type RuleResult = { ok: true } | { ok: false; reason: string };
