@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "@/theme";
@@ -11,12 +11,16 @@ export function ConfirmDialog({
   title,
   message,
   requireReason = false,
+  children,
+  validate,
   onConfirm,
   onCancel,
 }: {
   title: string;
   message: string;
   requireReason?: boolean;
+  children?: ReactNode;
+  validate?(): string | undefined;
   onConfirm(reason: string): void;
   onCancel(): void;
 }) {
@@ -54,11 +58,14 @@ export function ConfirmDialog({
                   autoFocus
                 />
               )}
+              {children}
               {!!error && <Message>{error}</Message>}
               <Button
                 title="Xác nhận"
                 onPress={() => {
                   if (requireReason && !reason.trim()) return setError("Vui lòng nhập lý do.");
+                  const invalid = validate?.();
+                  if (invalid) return setError(invalid);
                   onConfirm(reason);
                 }}
               />

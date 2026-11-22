@@ -172,6 +172,12 @@ export function executeCommand(
     case "cancel":
     case "no-show": {
       if (!command.reason?.trim()) throw new Error("Vui lòng nhập lý do.");
+      if (
+        command.type === "cancel" &&
+        r.deposit?.paidAt &&
+        typeof command.refundDeposit !== "boolean"
+      )
+        throw new Error("Vui lòng chọn có hoàn cọc cho khách hay không.");
       if (command.type === "no-show")
         assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
       r.status =
@@ -183,6 +189,8 @@ export function executeCommand(
       r.reason = command.reason.trim();
       release(r.id);
       r.history.push({ at, text: `${STATUS_LABELS[r.status]}: ${r.reason}` });
+      if (command.type === "cancel" && r.deposit?.paidAt)
+        r.history.push({ at, text: command.refundDeposit ? "Hoàn cọc" : "Không hoàn cọc" });
       notify(
         command.type === "cancel"
           ? "Lịch bị hủy"

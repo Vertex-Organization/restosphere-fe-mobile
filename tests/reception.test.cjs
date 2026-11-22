@@ -291,6 +291,19 @@ test("NO_SHOW cần 30 phút chờ, lý do và giải phóng giữ chỗ", () =>
     0,
   );
 });
+test("hủy lịch đã cọc phải chọn hoàn cọc hay không", () => {
+  const s = seed();
+  get(s, "r3").deposit = {
+    amount: 100000,
+    dueAt: now.toISOString(),
+    paidAt: now.toISOString(),
+    reference: "COC R3",
+  };
+  assert.throws(() => run(s, { type: "cancel", id: "r3", reason: "Khách gọi hủy" }), /hoàn cọc/);
+  const after = run(s, { type: "cancel", id: "r3", reason: "Khách gọi hủy", refundDeposit: false });
+  assert.equal(get(after, "r3").status, "CANCELLED");
+  assert.equal(get(after, "r3").history.at(-1).text, "Không hoàn cọc");
+});
 test("hủy / từ chối yêu cầu lý do và không giữ chỗ nữa", () => {
   const s = run(seed(), {
     type: "cancel",

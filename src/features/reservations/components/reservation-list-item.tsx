@@ -93,6 +93,14 @@ export function ReservationListItem({
             </Text>
           </View>
         )}
+        {r.deposit?.paidAt && ["PENDING", "CONFIRMED", "ARRIVED"].includes(r.status) && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <AppIcon name="checkmark-circle-outline" size={14} color={colors.success} />
+            <Text style={[ui.caption, { color: colors.success }]}>
+              Đã cọc {r.deposit.amount.toLocaleString("vi-VN")}đ
+            </Text>
+          </View>
+        )}
         {late > 0 && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             <AppIcon name="alert-circle-outline" size={14} color={colors.warning} />

@@ -94,6 +94,7 @@ export type ReceptionCommand =
       type: "confirm" | "reject" | "cancel" | "no-show";
       id: string;
       reason?: string;
+      refundDeposit?: boolean;
     }
   | { type: "assign"; id: string; tableId: string }
   | { type: "check-in"; id: string; actualGuests: number }
