@@ -197,6 +197,11 @@ export function getReservationActions(
       return [];
   }
 }
+// Mirrors the backend: Vietnamese 0…/+84… numbers or any international +… number.
+export function isValidPhone(raw: string): boolean {
+  const phone = raw.replace(/[\s().-]/g, "");
+  return /^(?:\+84|0)\d{9,10}$/.test(phone) || /^\+[1-9]\d{7,14}$/.test(phone);
+}
 export function validateReservationInput(
   input: ReservationInput,
   now: Date,
@@ -232,11 +237,8 @@ export function validateReservationInput(
   )
     errors.preorder = "Món đặt trước không hợp lệ.";
   if (!walkIn && !input.customer.name.trim()) errors.name = "Nhập tên khách.";
-  if (
-    input.customer.phone &&
-    !/^(?:\+84|0)[0-9]{9,10}$/.test(input.customer.phone.replace(/[\s.-]/g, ""))
-  )
-    errors.phone = "Nhập số điện thoại Việt Nam hợp lệ (0 hoặc +84).";
+  if (input.customer.phone && !isValidPhone(input.customer.phone))
+    errors.phone = "Nhập số điện thoại hợp lệ (0…, +84… hoặc số quốc tế +…).";
   if (!Number.isInteger(input.guests) || input.guests < 1)
     errors.guests = "Số khách phải là số nguyên lớn hơn 0.";
   else if (input.guests > 200) errors.guests = "Tối đa 200 khách mỗi lịch.";

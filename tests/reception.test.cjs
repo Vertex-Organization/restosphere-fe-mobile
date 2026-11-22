@@ -96,6 +96,18 @@ test("validation tên, phone, số khách, thời lượng, ngày quá khứ", (
     assert.throws(() => run(seed(), { type: "create", input: bad }));
   }
 });
+test("số điện thoại nhận 0…, +84… và số quốc tế", () => {
+  for (const ok of [
+    "0706710269",
+    "+84 706 710 269",
+    "(070) 671-0269",
+    "+14155552671",
+    "+44 7700 900123",
+  ])
+    assert.equal(rules.isValidPhone(ok), true, ok);
+  for (const bad of ["123", "abc", "+0123456789", "070671026", "84706710269"])
+    assert.equal(rules.isValidPhone(bad), false, bad);
+});
 test("xác nhận kiểm tra chỗ, giữ bàn; không xác nhận lần hai", () => {
   const before = seed();
   const after = run(before, { type: "confirm", id: "r1" });
