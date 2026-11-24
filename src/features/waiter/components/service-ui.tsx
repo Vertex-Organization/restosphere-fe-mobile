@@ -13,6 +13,7 @@ import {
   canOrder,
   canViewSession,
   money,
+  needsCleaning,
   serviceLabel,
   sessionBill,
   sessionItems,
@@ -147,18 +148,20 @@ export function SessionHeading({ session }: { session: TableSession }) {
   const table = state.tables.find((t) => t.id === session.tableId)!;
   const reservation = state.reservations.find((r) => r.id === session.reservationId)!;
   const bill = sessionBill(state, session.id);
-  const tone =
-    session.guestLeftAt || session.closedAt
+  const cleaning = needsCleaning(state, session);
+  const tone = cleaning
+    ? "warning"
+    : session.closedAt
       ? "neutral"
       : !session.acceptedAt || bill?.status === "PAYMENT_REQUESTED"
         ? "warning"
         : bill?.status === "PAID"
           ? "success"
           : "info";
-  const icon: IconName = session.closedAt
-    ? "checkmark-done-outline"
-    : session.guestLeftAt
-      ? "sparkles-outline"
+  const icon: IconName = cleaning
+    ? "sparkles-outline"
+    : session.closedAt
+      ? "checkmark-done-outline"
       : !session.acceptedAt
         ? "hand-left-outline"
         : bill?.status === "PAYMENT_REQUESTED"
@@ -190,18 +193,20 @@ export function SessionCard({ session }: { session: TableSession }) {
     .reduce((n, i) => n + i.quantity, 0);
   const ready = items.filter((i) => i.status === "READY").reduce((n, i) => n + i.quantity, 0);
   const bill = sessionBill(state, session.id);
-  const tone =
-    session.guestLeftAt || session.closedAt
+  const cleaning = needsCleaning(state, session);
+  const tone = cleaning
+    ? colors.warning
+    : session.closedAt
       ? colors.muted
       : !session.acceptedAt || bill?.status === "PAYMENT_REQUESTED"
         ? colors.warning
         : ready || bill?.status === "PAID"
           ? colors.success
           : colors.primary;
-  const icon: IconName = session.closedAt
-    ? "checkmark-done-outline"
-    : session.guestLeftAt
-      ? "sparkles-outline"
+  const icon: IconName = cleaning
+    ? "sparkles-outline"
+    : session.closedAt
+      ? "checkmark-done-outline"
       : !session.acceptedAt
         ? "hand-left-outline"
         : bill?.status === "PAYMENT_REQUESTED"
@@ -211,10 +216,10 @@ export function SessionCard({ session }: { session: TableSession }) {
             : ready
               ? "restaurant-outline"
               : "people-outline";
-  const action = session.closedAt
-    ? "Lượt phục vụ đã hoàn tất"
-    : session.guestLeftAt
-      ? "Chờ xác nhận dọn xong"
+  const action = cleaning
+    ? "Bàn chờ dọn · bấm Đã dọn"
+    : session.closedAt
+      ? "Lượt phục vụ đã hoàn tất"
       : !session.acceptedAt
         ? `Bàn giao ${timeLabel(session.handedOverAt)} · Nhận bàn`
         : ready

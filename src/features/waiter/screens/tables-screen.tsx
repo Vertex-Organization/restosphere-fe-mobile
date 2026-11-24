@@ -6,7 +6,7 @@ import { AppIcon, EmptyState, FilterChip, SearchInput, ui } from "@/components/u
 import { useApp } from "@/store/app-store";
 import { colors } from "@/theme";
 import { normalizeSearch } from "@/utils/search";
-import { sessionBill, sessionItems, visibleSessions } from "../selectors";
+import { needsCleaning, sessionBill, sessionItems, visibleSessions } from "../selectors";
 import { SessionCard } from "../components/service-ui";
 
 export default function WaiterTablesScreen() {
@@ -18,7 +18,7 @@ export default function WaiterTablesScreen() {
       ? requestedFilter
       : "mine";
   const [query, setQuery] = useState("");
-  const all = visibleSessions(state).filter((s) => !s.closedAt);
+  const all = visibleSessions(state).filter((s) => !s.closedAt || needsCleaning(state, s));
   const filters = [
     {
       key: "mine",
@@ -30,14 +30,14 @@ export default function WaiterTablesScreen() {
       key: "ready",
       label: "Có món sẵn sàng",
       count: all.filter(
-        (s) => !s.guestLeftAt && sessionItems(state, s.id).some((i) => i.status === "READY"),
+        (s) => !s.closedAt && sessionItems(state, s.id).some((i) => i.status === "READY"),
       ).length,
     },
     {
       key: "serving",
       label: "Đang phục vụ",
       count: all.filter(
-        (s) => !!s.acceptedAt && !s.guestLeftAt && sessionBill(state, s.id)?.status === "UNPAID",
+        (s) => !!s.acceptedAt && !s.closedAt && sessionBill(state, s.id)?.status === "UNPAID",
       ).length,
     },
     {
@@ -45,7 +45,11 @@ export default function WaiterTablesScreen() {
       label: "Chờ thanh toán",
       count: all.filter((s) => sessionBill(state, s.id)?.status === "PAYMENT_REQUESTED").length,
     },
-    { key: "cleaning", label: "Đang dọn", count: all.filter((s) => !!s.guestLeftAt).length },
+    {
+      key: "cleaning",
+      label: "Cần dọn",
+      count: all.filter((s) => needsCleaning(state, s)).length,
+    },
     { key: "all", label: "Tất cả", count: all.length },
   ];
   const data = all.filter((session) => {
@@ -58,14 +62,14 @@ export default function WaiterTablesScreen() {
         (filter === "mine" && session.waiterId === state.session?.id) ||
         (filter === "pending" && !session.acceptedAt) ||
         (filter === "ready" &&
-          !session.guestLeftAt &&
+          !session.closedAt &&
           sessionItems(state, session.id).some((i) => i.status === "READY")) ||
         (filter === "serving" &&
           !!session.acceptedAt &&
-          !session.guestLeftAt &&
+          !session.closedAt &&
           sessionBill(state, session.id)?.status === "UNPAID") ||
         (filter === "payment" && sessionBill(state, session.id)?.status === "PAYMENT_REQUESTED") ||
-        (filter === "cleaning" && !!session.guestLeftAt))
+        (filter === "cleaning" && needsCleaning(state, session)))
     );
   });
   return (

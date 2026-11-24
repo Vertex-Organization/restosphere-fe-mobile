@@ -18,6 +18,13 @@ export const sessionTotal = (state: ReceptionState, sessionId: string) =>
   sessionItems(state, sessionId)
     .filter((i) => !["DRAFT", "REJECTED", "CANCELLED", "VOIDED"].includes(i.status))
     .reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+/** Payment closed the session; the table waits for the waiter to confirm it is cleaned. */
+export const needsCleaning = (state: ReceptionState, session: TableSession) =>
+  !!session.closedAt &&
+  state.tables.some((t) => t.id === session.tableId && t.status === "CLEANING") &&
+  !state.tableSessions.some(
+    (s) => s.tableId === session.tableId && !s.closedAt,
+  );
 export function canViewSession(state: ReceptionState, session: TableSession) {
   if (!hasPermission(state.session, "table.read_assigned")) return false;
   if (session.waiterId === state.session?.id) return true;
@@ -41,7 +48,6 @@ export function canOrder(state: ReceptionState, session: TableSession) {
     hasPermission(state.session, "order.create") &&
     session.waiterId === state.session?.id &&
     !!session.acceptedAt &&
-    !session.guestLeftAt &&
     !session.closedAt &&
     !session.paymentRequested &&
     (!sessionBill(state, session.id) || sessionBill(state, session.id)?.status === "UNPAID") &&
@@ -62,8 +68,8 @@ export function paymentBlockReason(state: ReceptionState, session: TableSession)
   return "";
 }
 export function serviceLabel(state: ReceptionState, session: TableSession) {
+  if (needsCleaning(state, session)) return "Cần dọn bàn";
   if (session.closedAt) return "Đã hoàn tất";
-  if (session.guestLeftAt) return "Đang dọn";
   if (!session.acceptedAt) return "Chờ tiếp nhận";
   const status = sessionBill(state, session.id)?.status;
   if (status === "PAID") return "Đã thanh toán";
