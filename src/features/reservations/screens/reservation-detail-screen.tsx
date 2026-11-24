@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Linking, Text, View } from "react-native";
+import { Linking, Share, Text, View } from "react-native";
 import { Screen } from "@/components/layout/screen";
 import {
   Button,
@@ -169,7 +169,19 @@ export default function ReservationDetailScreen() {
               <Text selectable style={ui.text}>
                 {r.deposit.payos.checkoutUrl}
               </Text>
-              <Text style={ui.muted}>Nhấn giữ liên kết để sao chép và gửi khách.</Text>
+              <Button
+                title="Gửi link cho khách (Zalo / SMS)"
+                onPress={async () => {
+                  try {
+                    await Share.share({
+                      message: `Thanh toán cọc đặt bàn ${r.code}: ${r.deposit!.payos!.checkoutUrl}`,
+                    });
+                  } catch (e) {
+                    fail(e, "top");
+                  }
+                }}
+              />
+              <Text style={ui.muted}>Hoặc nhấn giữ liên kết để sao chép.</Text>
               <Button
                 title="Mở thanh toán payOS / QR"
                 variant="secondary"
