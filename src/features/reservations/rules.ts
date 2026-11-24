@@ -16,6 +16,8 @@ export const DEFAULT_SETTINGS: ReservationSettings = { bufferMinutes: 15, noShow
 const yes: RuleResult = { ok: true };
 const no = (reason: string): RuleResult => ({ ok: false, reason });
 export const holdsTable = (r: Reservation) => ["CONFIRMED", "ARRIVED", "SEATED"].includes(r.status);
+export const reservationTableIds = (r: ReservationInput) =>
+  r.tableIds?.length ? r.tableIds : r.tableId ? [r.tableId] : [];
 export const endsAt = (r: ReservationInput) => addMinutes(r.startsAt, r.duration);
 export const heldRange = (r: Reservation) => ({
   ...r,
@@ -43,13 +45,15 @@ export function isTableAvailableForTimeRange(
   now = new Date(),
 ): RuleResult {
   const buffer = state.settings.bufferMinutes;
+  if (state.areas.find((a) => a.id === table.areaId)?.active === false)
+    return no("Khu vực đang ngừng nhận bàn mới.");
   if (table.status === "OUT_OF_SERVICE") return no(`Bàn ${table.code} đang tạm ngưng sử dụng.`);
   if (input.guests > table.capacity)
     return no(`Bàn ${table.code} chỉ phục vụ tối đa ${table.capacity} khách.`);
   if (input.areaId && input.areaId !== table.areaId)
     return no(`Bàn ${table.code} không thuộc khu vực yêu cầu.`);
   const conflicts = state.reservations.filter(
-    (r) => r.id !== excludeId && r.tableId === table.id && holdsTable(r),
+    (r) => r.id !== excludeId && reservationTableIds(r).includes(table.id) && holdsTable(r),
   );
   if (conflicts.some((r) => hasTimeConflict(heldRange(r), input, buffer)))
     return no(
@@ -92,6 +96,24 @@ export function canAssignTable(
     r.id,
     now,
   );
+}
+export function canAssignTables(
+  state: ReceptionState,
+  r: Reservation,
+  ids: string[],
+  now = new Date(),
+): RuleResult {
+  const guests = r.actualGuests ?? r.guests;
+  if (!ids.length) return no("Chọn ít nhất một bàn.");
+  if (new Set(ids).size !== ids.length || ids.length > guests)
+    return no("Mỗi bàn cần ít nhất một khách.");
+  let capacity = 0;
+  for (const id of ids) {
+    const check = canAssignTable(state, { ...r, guests: 1, actualGuests: 1 }, id, now);
+    if (!check.ok) return check;
+    capacity += state.tables.find((t) => t.id === id)!.capacity;
+  }
+  return capacity >= guests ? yes : no("Tổng sức chứa chưa đủ cho số khách.");
 }
 export function getAvailableTables(
   state: ReceptionState,
@@ -150,17 +172,11 @@ export function openingHoursError(
 }
 export function canHandover(state: ReceptionState, r: Reservation, now = new Date()): RuleResult {
   if (r.status !== "ARRIVED") return no("Khách phải check-in trước khi bàn giao.");
-  if (!r.tableId) return no("Cần gán bàn trước khi bàn giao.");
-  const table = state.tables.find((t) => t.id === r.tableId);
-  if (!table || table.status !== "AVAILABLE") return no("Chưa thể bàn giao vì bàn chưa sẵn sàng.");
-  // Service starts now, not at the original booking time (early/late arrivals).
-  return isTableAvailableForTimeRange(
-    state,
-    table,
-    { ...r, startsAt: now.toISOString(), guests: r.actualGuests ?? r.guests },
-    r.id,
-    now,
-  );
+  const ids = reservationTableIds(r);
+  if (!ids.length) return no("Cần gán bàn trước khi bàn giao.");
+  if (ids.some((id) => state.tables.find((t) => t.id === id)?.status !== "AVAILABLE"))
+    return no("Chưa thể bàn giao vì bàn chưa sẵn sàng.");
+  return canAssignTables(state, { ...r, arrivedAt: now.toISOString() }, ids, now);
 }
 export function canMarkNoShow(
   r: Reservation,

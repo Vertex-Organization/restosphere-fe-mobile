@@ -49,6 +49,7 @@ export function mapSnapshot(data: Snapshot, staffId: string): Snapshot {
     }),
     reservations: data.reservations.map((r) => ({
       ...r,
+      tableIds: data.assignments.filter((a) => a.reservationId === r.id && !a.releasedAt).map((a) => a.tableId),
       notes: r.notes ?? "",
       specialRequests: r.specialRequests ?? "",
     })),
@@ -70,6 +71,19 @@ export function mapSnapshot(data: Snapshot, staffId: string): Snapshot {
   };
 }
 export const loadWorkspace = () => authenticatedRequest<Snapshot>("workspaces/staff");
+export type SessionChange =
+  | { type: "merge"; sessionId: string; sourceSessionId: string }
+  | { type: "split"; sessionId: string; targetTableId: string; itemIds: string[]; guestCount: number }
+  | { type: "refresh-payment"; paymentId: string };
+export async function changeSession(command: SessionChange) {
+  if (command.type === "refresh-payment") {
+    await authenticatedRequest(`payments/${command.paymentId}/refresh`, {});
+  } else {
+    const { type, sessionId, ...body } = command;
+    await authenticatedRequest(`table-sessions/${sessionId}/${type}`, body);
+  }
+  return loadWorkspace();
+}
 export async function sendCommand(command: ReceptionCommand | WaiterCommand) {
   const result = await authenticatedRequest<{
     data: Snapshot;

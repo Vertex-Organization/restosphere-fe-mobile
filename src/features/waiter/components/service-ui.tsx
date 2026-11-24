@@ -173,8 +173,8 @@ export function SessionHeading({ session }: { session: TableSession }) {
       </Text>
       <Text style={ui.muted}>
         {state.areas.find((a) => a.id === table.areaId)?.name} ·{" "}
-        {reservation.actualGuests ?? reservation.guests} khách · Vào{" "}
-        {timeLabel(reservation.arrivedAt ?? session.handedOverAt)}
+        {session.guests ?? reservation?.actualGuests ?? reservation?.guests ?? "—"} khách · Vào{" "}
+        {timeLabel(reservation?.arrivedAt ?? session.handedOverAt)}
       </Text>
       <StatusTag label={serviceLabel(state, session)} tone={tone} icon={icon} />
     </View>
@@ -257,11 +257,11 @@ export function SessionCard({ session }: { session: TableSession }) {
           {serviceLabel(state, session)}
         </Text>
         <Text style={ui.muted}>
-          {state.areas.find((a) => a.id === table.areaId)?.name} · {r.actualGuests ?? r.guests}{" "}
+          {state.areas.find((a) => a.id === table.areaId)?.name} · {session.guests ?? r?.actualGuests ?? r?.guests ?? "—"}{" "}
           khách
         </Text>
         <Text style={ui.caption}>
-          {r.customer.name} ·{" "}
+          {r?.customer.name ?? "Khách tách bàn"} ·{" "}
           {session.acceptedAt ? timeLabel(session.acceptedAt) : timeLabel(session.handedOverAt)}
         </Text>
         <Text

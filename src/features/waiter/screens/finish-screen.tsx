@@ -1,106 +1,25 @@
-import { useState } from "react";
-import { Text } from "react-native";
 import { Screen } from "@/components/layout/screen";
-import { Button, ConfirmDialog, DetailRow, Message, Section, ui } from "@/components/ui";
+import { Button, DetailRow, Message, Section } from "@/components/ui";
 import { useApp } from "@/store/app-store";
-import { hasPermission } from "@/features/auth/permissions";
 import { PAYMENT_LABELS } from "@/features/orders/labels";
-import { TABLE_LABELS } from "@/features/tables/labels";
 import { sessionBill } from "../selectors";
-import {
-  MissingSession,
-  SessionHeading,
-  openServiceScreen,
-  useServiceSession,
-  useWaiterAction,
-} from "../components/service-ui";
+import { MissingSession, SessionHeading, openServiceScreen, useServiceSession } from "../components/service-ui";
 import { dateTimeLabel } from "@/utils/dates";
 
 export default function FinishScreen() {
-  const { state } = useApp();
+  const { state, retrySave } = useApp();
   const session = useServiceSession();
-  const { act, error } = useWaiterAction();
-  const [confirm, setConfirm] = useState<"guest-left" | "clean">();
   if (!session) return <MissingSession />;
-  const table = state.tables.find((t) => t.id === session.tableId)!;
-  const bill = sessionBill(state, session.id)!;
+  const bill = sessionBill(state, session.id);
   return (
     <Screen>
       <SessionHeading session={session} />
-      {!!error && <Message>{error}</Message>}
-      <Section title="Kiểm tra trước khi trả bàn">
-        <DetailRow label="Thanh toán" value={PAYMENT_LABELS[bill.status]} />
-        <DetailRow
-          label="Khách tại bàn"
-          value={
-            session.guestLeftAt
-              ? `Đã rời · ${dateTimeLabel(session.guestLeftAt)}`
-              : "Khách còn tại bàn"
-          }
-        />
-        <DetailRow
-          label="Trạng thái bàn"
-          value={session.closedAt ? "Lượt đã kết thúc" : TABLE_LABELS[table.status]}
-        />
+      <Section title="Kết thúc phục vụ">
+        <DetailRow label="Thanh toán" value={bill ? PAYMENT_LABELS[bill.status] : "Hóa đơn ghép · kiểm tra với thu ngân"} />
+        {session.closedAt ? <Message kind="success">Phiên đã đóng lúc {dateTimeLabel(session.closedAt)}. Thanh toán hoàn tất tự đóng các phiên và trả bàn; không cần xác nhận khách rời hoặc dọn bàn.</Message> : <Message kind="info">Khi hóa đơn được thanh toán đủ, máy chủ tự đóng các phiên liên quan và trả bàn.</Message>}
       </Section>
-      {bill.status !== "PAID" && (
-        <>
-          <Message kind="info">
-            {bill.status === "PAYMENT_REQUESTED"
-              ? "Thanh toán chưa hoàn tất hoặc đã bị hủy/thu hồi. Hãy kiểm tra lại với thu ngân."
-              : "Cần thu ngân xác nhận thanh toán trước khi kết thúc phục vụ."}
-          </Message>
-          <Button
-            title="Xem yêu cầu thanh toán"
-            variant="secondary"
-            onPress={() => openServiceScreen("payment", session)}
-          />
-        </>
-      )}
-      {bill.status === "PAID" && !session.guestLeftAt && (
-        <>
-          <Text style={ui.text}>Chỉ xác nhận sau khi quan sát thấy toàn bộ khách đã rời bàn.</Text>
-          <Button
-            title="Xác nhận khách đã rời bàn"
-            disabled={!hasPermission(state.session, "table.mark_guest_left")}
-            onPress={() => setConfirm("guest-left")}
-          />
-        </>
-      )}
-      {bill.status === "PAID" && !!session.guestLeftAt && !session.closedAt && (
-        <>
-          <Message kind="info">
-            Bàn đang dọn. Kiểm tra mặt bàn, ghế và dụng cụ trước khi đánh dấu sẵn sàng.
-          </Message>
-          <Button
-            title="Xác nhận bàn đã dọn xong"
-            disabled={!hasPermission(state.session, "table.mark_cleaned")}
-            onPress={() => setConfirm("clean")}
-          />
-        </>
-      )}
-      {!!session.closedAt && (
-        <Message kind="success">
-          Đã hoàn tất phục vụ lúc {dateTimeLabel(session.closedAt)}. Lượt đã được lưu vào lịch sử.
-        </Message>
-      )}
-      {confirm && (
-        <ConfirmDialog
-          title={
-            confirm === "guest-left" ? "Khách thực sự đã rời bàn?" : "Bàn thực sự đã dọn xong?"
-          }
-          message={
-            confirm === "guest-left"
-              ? "Xác nhận toàn bộ khách đã rời. Bàn sẽ chuyển sang Đang dọn, chưa sẵn sàng đón khách mới."
-              : "Xác nhận bàn, ghế và dụng cụ đã được chuẩn bị. Lượt sử dụng sẽ kết thúc và bàn trở về Sẵn sàng nếu đủ điều kiện."
-          }
-          onCancel={() => setConfirm(undefined)}
-          onConfirm={() => {
-            act({ type: confirm, sessionId: session.id, confirmed: true });
-            setConfirm(undefined);
-          }}
-        />
-      )}
+      {!session.closedAt && <Button title="Xem yêu cầu thanh toán" onPress={() => openServiceScreen("payment", session)} />}
+      <Button title="Tải lại trạng thái" variant="secondary" onPress={retrySave} />
     </Screen>
   );
 }

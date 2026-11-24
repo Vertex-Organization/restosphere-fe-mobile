@@ -7,11 +7,16 @@ import { TableItem } from "@/features/tables/components/table-item";
 import { tableCode } from "@/features/tables/labels";
 import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
-import { canAssignTable, getReservationActions } from "../rules";
+import {
+  canAssignTable,
+  canAssignTables,
+  getReservationActions,
+  reservationTableIds,
+} from "../rules";
 export default function AssignTableScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, now, run } = useApp();
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
   const r = state.reservations.find((item) => item.id === id);
@@ -31,7 +36,7 @@ export default function AssignTableScreen() {
     );
   const checks = state.tables.map((table) => ({
     table,
-    check: canAssignTable(state, r, table.id, now),
+    check: canAssignTable(state, { ...r, guests: 1, actualGuests: 1 }, table.id, now),
   }));
 
   return (
@@ -50,18 +55,19 @@ export default function AssignTableScreen() {
               {dateTimeLabel(r.arrivedAt ?? r.startsAt)} · {r.duration} phút
             </Text>
             <Text style={ui.muted}>
-              Bàn hiện tại: {r.tableId ? tableCode(state.tables, r.tableId) : "Chưa gán"}. Không hỗ
-              trợ ghép bàn.
+              Bàn hiện tại:{" "}
+              {reservationTableIds(r)
+                .map((id) => tableCode(state.tables, id))
+                .join(" + ") || "Chưa gán"}
+              . Chọn nhiều bàn đủ tổng sức chứa.
             </Text>
             {!!error && <Message>{error}</Message>}
             {!checks.some((item) => item.check.ok) && (
               <Message>Chưa có bàn phù hợp. Các lý do được hiển thị bên dưới.</Message>
             )}
             <Button
-              title={
-                selected ? `Xác nhận bàn ${tableCode(state.tables, selected)}` : "Chọn bàn bên dưới"
-              }
-              disabled={!selected}
+              title={selected.length ? `Xác nhận ${selected.length} bàn` : "Chọn bàn bên dưới"}
+              disabled={!canAssignTables(state, r, selected, now).ok}
               onPress={() => setConfirm(true)}
             />
             <Button
@@ -78,20 +84,26 @@ export default function AssignTableScreen() {
         renderItem={({ item }) => (
           <TableItem
             table={item.table}
-            selected={selected === item.table.id}
+            selected={selected.includes(item.table.id)}
             reason={item.check.ok ? undefined : item.check.reason}
-            onPress={() => setSelected(item.table.id)}
+            onPress={() =>
+              setSelected(
+                selected.includes(item.table.id)
+                  ? selected.filter((id) => id !== item.table.id)
+                  : [...selected, item.table.id],
+              )
+            }
           />
         )}
       />
       {confirm && (
         <ConfirmDialog
           title={r.tableId ? "Xác nhận đổi bàn" : "Xác nhận gán bàn"}
-          message={`Bàn cũ: ${r.tableId ? tableCode(state.tables, r.tableId) : "Chưa có"} → bàn mới: ${tableCode(state.tables, selected)}. Kiểm tra lại xung đột trước khi lưu.`}
+          message={`Bàn cũ: ${r.tableId ? tableCode(state.tables, r.tableId) : "Chưa có"} → bàn mới: ${selected.map((id) => tableCode(state.tables, id)).join(" + ")}. Kiểm tra lại xung đột trước khi lưu.`}
           onCancel={() => setConfirm(false)}
           onConfirm={async () => {
             try {
-              await run({ type: "assign", id: r.id, tableId: selected });
+              await run({ type: "assign", id: r.id, tableIds: selected });
               if (r.status === "ARRIVED") router.replace(`/reception/handover?id=${r.id}`);
               else if (router.canGoBack()) router.back();
               else router.replace(`/reception/reservations/${r.id}`);

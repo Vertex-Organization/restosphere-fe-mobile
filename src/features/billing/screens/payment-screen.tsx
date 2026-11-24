@@ -39,7 +39,15 @@ export default function PaymentScreen() {
         <Message kind="info">Cần tiếp nhận phục vụ trước khi xem yêu cầu thanh toán.</Message>
       </Screen>
     );
-  const bill = sessionBill(state, session.id)!;
+  const bill = sessionBill(state, session.id);
+  if (!bill) return (
+    <Screen>
+      <SessionHeading session={session} />
+      <Message kind="info">Phiên dùng hóa đơn ghép. Máy chủ chưa cung cấp liên kết hóa đơn cho phiên này; hãy kiểm tra tổng với thu ngân.</Message>
+      {!!error && <Message>{error}</Message>}
+      {!session.closedAt && <Button title={session.paymentRequested ? "Rút yêu cầu thanh toán" : "Gửi yêu cầu thanh toán"} onPress={() => act({ type: session.paymentRequested ? "withdraw-payment-request" : "request-payment", sessionId: session.id })} />}
+    </Screen>
+  );
   const reason = paymentBlockReason(state, session);
   const items = sessionItems(state, session.id);
   const currentTotal = bill.currentAmount ?? sessionTotal(state, session.id);
@@ -116,9 +124,7 @@ export default function PaymentScreen() {
         <>
           <Message kind="success">
             Thu ngân đã xác nhận lúc {dateTimeLabel(bill.paidAt!)}.{" "}
-            {session.guestLeftAt
-              ? "Đã ghi nhận khách rời bàn."
-              : "Bàn vẫn có khách cho đến khi bạn xác nhận khách đã rời."}
+            Thanh toán đủ tự đóng mọi phiên của hóa đơn và trả bàn.
           </Message>
           <Button
             title="Mở kết thúc phục vụ"

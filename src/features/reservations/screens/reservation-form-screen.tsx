@@ -17,7 +17,12 @@ import { errorField } from "@/features/auth/api";
 import { TableItem } from "@/features/tables/components/table-item";
 import { useApp } from "@/store/app-store";
 import { addMinutes } from "@/utils/dates";
-import { getAvailableTables, getReservationActions, isTableAvailableForTimeRange } from "../rules";
+import {
+  getAvailableTables,
+  getReservationActions,
+  isTableAvailableForTimeRange,
+  reservationTableIds,
+} from "../rules";
 import type { Reservation, ReservationInput } from "../types";
 
 // Server field names shown beside their own input instead of the top banner.
@@ -66,13 +71,14 @@ function ReservationForm({
   walkIn?: boolean;
 }) {
   const { state, now, run } = useApp();
+  const [counter, setCounter] = useState(false);
   const [name, setName] = useState(r?.customer.name ?? "");
   const [phone, setPhone] = useState(r?.customer.phone ?? "");
   const [date, setDate] = useState(r ? new Date(r.startsAt) : addMinutes(now, 60));
   const [guests, setGuests] = useState(String(r?.guests ?? 2));
   const [duration, setDuration] = useState(String(r?.duration ?? 90));
   const [areaId, setArea] = useState(r?.areaId ?? "");
-  const [tableId, setTable] = useState(r?.tableId ?? "");
+  const [tableIds, setTables] = useState<string[]>(r ? reservationTableIds(r) : []);
   const [notes, setNotes] = useState(r?.notes ?? "");
   const [specialRequests, setSpecial] = useState(r?.specialRequests ?? "");
   const [error, setError] = useState("");
@@ -81,25 +87,21 @@ function ReservationForm({
   const [discard, setDiscard] = useState(false);
   const input: ReservationInput = {
     customer: { name, phone },
+    counter,
     startsAt: (walkIn ? now : date).toISOString(),
     guests: Number(guests),
     duration: Number(duration),
     areaId: areaId || undefined,
-    tableId: tableId || undefined,
+    tableIds,
     notes,
     specialRequests,
     email: r?.email,
     occasion: r?.occasion,
     preorder: r?.preorder,
   };
-  const available = getAvailableTables(state, input, r?.id, now).filter(
+  const available = getAvailableTables(state, { ...input, guests: 1 }, r?.id, now).filter(
     (t) => !walkIn || t.status === "AVAILABLE",
   );
-  const selected = state.tables.find((t) => t.id === tableId);
-  const selectedCheck = selected
-    ? isTableAvailableForTimeRange(state, selected, input, r?.id, now)
-    : undefined;
-  const invalidSelected = !!tableId && !available.some((t) => t.id === tableId);
   async function save() {
     const actualInput = {
       ...input,
@@ -137,6 +139,17 @@ function ReservationForm({
           ? "Chọn bàn sẵn sàng. Khách được ghi nhận đã đến, sau đó bàn giao cho phục vụ."
           : "Lịch mới ở trạng thái chờ xác nhận và chưa giữ bàn."}
       </Text>
+      {!walkIn && !r && (
+        <Select
+          label="Nguồn đặt bàn"
+          value={counter ? "counter" : "phone"}
+          onChange={(value) => setCounter(value === "counter")}
+          options={[
+            { value: "phone", label: "Qua điện thoại" },
+            { value: "counter", label: "Tại quầy · đặt cho lần đến sau" },
+          ]}
+        />
+      )}
       {!!generalError && <Message>{generalError}</Message>}
       <Section title="Thông tin khách">
         <Field
@@ -176,15 +189,17 @@ function ReservationForm({
         error={fieldError("duration")}
       />
       <Select
-        label="Khu vực *"
+        label="Khu vực mong muốn"
         value={areaId}
         onChange={(value) => {
           setArea(value);
-          setTable("");
+          setTables([]);
         }}
         options={[
-          { value: "", label: "Chọn khu vực" },
-          ...state.areas.map((a) => ({ value: a.id, label: a.name })),
+          { value: "", label: "Không yêu cầu khu" },
+          ...state.areas
+            .filter((a) => a.active !== false)
+            .map((a) => ({ value: a.id, label: a.name })),
         ]}
       />
       {!!fieldError("areaId") && <Message>{fieldError("areaId")}</Message>}
@@ -202,60 +217,45 @@ function ReservationForm({
         multiline
         error={fieldError("specialRequests")}
       />
-      {walkIn ? (
-        <Section title="Chọn bàn sẵn sàng">
-          {!available.length && (
-            <Message>
-              Không có bàn sẵn sàng đủ sức chứa và không trùng lịch. Chưa thể tiếp nhận khách.
-            </Message>
-          )}
-          {state.tables
-            .filter((t) => !areaId || t.areaId === areaId)
-            .map((t) => {
-              const check = isTableAvailableForTimeRange(state, t, input, undefined, now);
-              return (
-                <TableItem
-                  key={t.id}
-                  table={t}
-                  selected={tableId === t.id}
-                  reason={
-                    !check.ok
-                      ? check.reason
-                      : t.status !== "AVAILABLE"
-                        ? "Bàn chưa sẵn sàng để tiếp nhận ngay."
-                        : undefined
-                  }
-                  onPress={() => setTable(t.id)}
-                />
-              );
-            })}
-        </Section>
-      ) : (
-        <Select
-          label="Bàn dự kiến"
-          value={tableId}
-          onChange={setTable}
-          options={[
-            {
-              value: "",
-              label: r?.status === "CONFIRMED" ? "Cần chọn một bàn để giữ chỗ" : "Chưa gán bàn",
-            },
-            ...(invalidSelected
-              ? [
-                  {
-                    value: tableId,
-                    label: `${selected?.code ?? "Bàn cũ"} · Không còn phù hợp, cần chọn lại`,
-                  },
-                ]
-              : []),
-            ...available.map((t) => ({
-              value: t.id,
-              label: `${t.code} · ${t.capacity} chỗ · ${state.areas.find((a) => a.id === t.areaId)?.name}`,
-            })),
-          ]}
-        />
-      )}
-      {selectedCheck && !selectedCheck.ok && <Message>{selectedCheck.reason}</Message>}
+      <Section title="Chọn bàn · có thể chọn nhiều bàn">
+        {!available.length && (
+          <Message>
+            Không có bàn sẵn sàng đủ sức chứa và không trùng lịch. Chưa thể tiếp nhận khách.
+          </Message>
+        )}
+        {state.tables
+          .filter((t) => !areaId || t.areaId === areaId)
+          .map((t) => {
+            const check = isTableAvailableForTimeRange(
+              state,
+              t,
+              { ...input, guests: 1 },
+              r?.id,
+              now,
+            );
+            return (
+              <TableItem
+                key={t.id}
+                table={t}
+                selected={tableIds.includes(t.id)}
+                reason={
+                  !check.ok
+                    ? check.reason
+                    : walkIn && t.status !== "AVAILABLE"
+                      ? "Bàn chưa sẵn sàng để tiếp nhận ngay."
+                      : undefined
+                }
+                onPress={() =>
+                  setTables(
+                    tableIds.includes(t.id)
+                      ? tableIds.filter((id) => id !== t.id)
+                      : [...tableIds, t.id],
+                  )
+                }
+              />
+            );
+          })}
+      </Section>
       {!!fieldError("tableId") && <Message>{fieldError("tableId")}</Message>}
       {!available.length && !walkIn && (
         <Message>

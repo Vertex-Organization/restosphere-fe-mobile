@@ -2,6 +2,8 @@ export type TableStatus = "AVAILABLE" | "OCCUPIED" | "CLEANING" | "OUT_OF_SERVIC
 export interface RestaurantArea {
   id: string;
   name: string;
+  active?: boolean;
+  sortOrder?: number;
 }
 export interface RestaurantTable {
   id: string;

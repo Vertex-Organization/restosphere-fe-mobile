@@ -1,4 +1,5 @@
 import { Text, View } from "react-native";
+import { SessionOperations } from "../components/session-operations";
 import { Screen } from "@/components/layout/screen";
 import { Button, EmptyState, Message, Section, ui } from "@/components/ui";
 import { useApp } from "@/store/app-store";
@@ -50,11 +51,12 @@ export default function WaiterTableDetailScreen() {
           onPress={() => openServiceScreen("cart", session)}
         />
       )}
+      <SessionOperations session={session} />
       <Section title="Thông tin bàn giao">
-        <Text style={ui.text}>{r.customer.name}</Text>
+        <Text style={ui.text}>{r?.customer.name ?? "Khách tách bàn"}</Text>
         <Text style={ui.muted}>Lễ tân bàn giao {dateTimeLabel(session.handedOverAt)}</Text>
         <Text style={ui.text}>
-          {[r.notes, r.specialRequests].filter(Boolean).join("\n") || "Không có ghi chú bàn giao."}
+          {[r?.notes, r?.specialRequests].filter(Boolean).join("\n") || "Không có ghi chú bàn giao."}
         </Text>
         <Text style={ui.muted}>
           Phụ trách:{" "}
@@ -103,7 +105,7 @@ export default function WaiterTableDetailScreen() {
           />
           {(bill?.status === "PAID" || session.closedAt) && (
             <Button
-              title="Khách rời bàn / dọn bàn"
+              title="Xem kết thúc phục vụ"
               variant="secondary"
               onPress={() => openServiceScreen("finish", session)}
             />

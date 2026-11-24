@@ -7,7 +7,6 @@ import {
   ConfirmDialog,
   DetailRow,
   EmptyState,
-  FilterChip,
   Message,
   Section,
   ui,
@@ -31,11 +30,10 @@ const ACTION_LABELS: Record<ReservationAction, string> = {
 };
 export default function ReservationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, now, run } = useApp();
+  const { state, now, run, changeSession, busy } = useApp();
   const [dialog, setDialog] = useState<"confirm" | "reject" | "cancel" | "no-show" | null>(null);
   const [exceptionOpen, setExceptionOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
-  const [refundDeposit, setRefundDeposit] = useState<boolean>();
   const [error, setError] = useState<{ text: string; at: "top" | "bottom" }>();
   const [origin, setOrigin] = useState<"top" | "bottom">("top");
   const r = state.reservations.find((item) => item.id === id);
@@ -84,7 +82,6 @@ export default function ReservationDetailScreen() {
   function act(action: ReservationAction, from: "top" | "bottom") {
     setError(undefined);
     setOrigin(from);
-    setRefundDeposit(undefined);
     if (action === "confirm" || action === "reject" || action === "cancel" || action === "no-show")
       setDialog(action);
     else if (action === "edit") router.push(`/reception/reservations/form?id=${id}`);
@@ -135,9 +132,9 @@ export default function ReservationDetailScreen() {
       )}
       {awaitingDeposit && (
         <Message kind="info">
-          Khách chuyển khoản với nội dung “{r.deposit!.reference}” trước{" "}
-          {dateTimeLabel(r.deposit!.dueAt)}, quá hạn lịch tự hủy. Kiểm tra tài khoản ngân hàng rồi
-          bấm “Đã nhận cọc”, sau đó mới xác nhận được lịch.
+          Thu cọc trước {dateTimeLabel(r.deposit!.dueAt)}. Không hoàn cọc khi hủy hoặc không đến. Lễ
+          tân không nhận tiền mặt; chuyển khách đến thu ngân. Trạng thái tự cập nhật sau khi máy chủ
+          nhận thanh toán.
         </Message>
       )}
       {r.status === "PENDING" && !awaitingDeposit && (
@@ -152,13 +149,62 @@ export default function ReservationDetailScreen() {
       )}
       {topError}
       {awaitingDeposit && actions.length > 0 && (
-        <Button
-          title="Đã nhận cọc"
-          onPress={() => {
-            setError(undefined);
-            setDepositOpen(true);
-          }}
-        />
+        <Section title="Thu cọc">
+          {r.deposit?.cashRequestedAt && (
+            <Message kind="info">Đã chuyển thu ngân thu cọc tiền mặt.</Message>
+          )}
+          <Button
+            title="Tạo link thu cọc payOS"
+            disabled={busy}
+            onPress={async () => {
+              try {
+                await run({ type: "deposit-link", id: r.id });
+              } catch (e) {
+                fail(e, "top");
+              }
+            }}
+          />
+          {!!r.deposit?.payos?.checkoutUrl && (
+            <>
+              <Text selectable style={ui.text}>
+                {r.deposit.payos.checkoutUrl}
+              </Text>
+              <Text style={ui.muted}>Nhấn giữ liên kết để sao chép và gửi khách.</Text>
+              <Button
+                title="Mở thanh toán payOS / QR"
+                variant="secondary"
+                onPress={async () => {
+                  try {
+                    await Linking.openURL(r.deposit!.payos!.checkoutUrl);
+                  } catch (e) {
+                    fail(e, "top");
+                  }
+                }}
+              />
+              <Button
+                title="Kiểm tra lại"
+                disabled={busy}
+                variant="secondary"
+                onPress={async () => {
+                  try {
+                    await changeSession({
+                      type: "refresh-payment",
+                      paymentId: r.deposit!.payos!.paymentId,
+                    });
+                  } catch (e) {
+                    fail(e, "top");
+                  }
+                }}
+              />
+            </>
+          )}
+          <Button
+            title="Chuyển thu ngân thu cọc tiền mặt"
+            disabled={busy}
+            variant="secondary"
+            onPress={() => setDepositOpen(true)}
+          />
+        </Section>
       )}
       {primaryAction && (
         <Button title={ACTION_LABELS[primaryAction]} onPress={() => act(primaryAction, "top")} />
@@ -195,12 +241,12 @@ export default function ReservationDetailScreen() {
       </View>
       {depositOpen && r.deposit && (
         <ConfirmDialog
-          title="Xác nhận đã nhận cọc"
-          message={`Đã nhận ${depositAmount} với nội dung “${r.deposit.reference}” cho ${r.code}?`}
+          title="Chuyển thu ngân thu cọc"
+          message={`Chuyển yêu cầu thu ${depositAmount} cho thu ngân? Link payOS hiện tại sẽ bị hủy để tránh thu hai lần.`}
           onCancel={() => setDepositOpen(false)}
           onConfirm={async () => {
             try {
-              await run({ type: "confirm-deposit", id: r.id });
+              await run({ type: "deposit-cash", id: r.id });
             } catch (e) {
               fail(e, "top");
             }
@@ -274,11 +320,6 @@ export default function ReservationDetailScreen() {
               ? `Xác nhận ${r.code} và giữ bàn ${candidate ?? "phù hợp"}?`
               : `${ACTION_LABELS[dialog]} ${r.code}? Bàn đang giữ cho lịch này sẽ được trả lại.`
           }
-          validate={() =>
-            askRefund && refundDeposit === undefined
-              ? "Vui lòng chọn có hoàn cọc cho khách hay không."
-              : undefined
-          }
           onCancel={() => setDialog(null)}
           onConfirm={async (reason) => {
             try {
@@ -286,7 +327,6 @@ export default function ReservationDetailScreen() {
                 type: dialog,
                 id: r.id,
                 reason,
-                ...(askRefund && { refundDeposit }),
               });
               setDialog(null);
             } catch (e) {
@@ -298,16 +338,7 @@ export default function ReservationDetailScreen() {
           {askRefund && (
             <View style={{ gap: 8 }}>
               <Text style={ui.label}>Tiền cọc {depositAmount} *</Text>
-              <FilterChip
-                title="Khách yêu cầu hủy – không hoàn cọc"
-                selected={refundDeposit === false}
-                onPress={() => setRefundDeposit(false)}
-              />
-              <FilterChip
-                title="Nhà hàng hủy – hoàn cọc cho khách"
-                selected={refundDeposit === true}
-                onPress={() => setRefundDeposit(true)}
-              />
+              <Text style={ui.text}>Không hoàn cọc trong mọi trường hợp.</Text>
             </View>
           )}
         </ConfirmDialog>

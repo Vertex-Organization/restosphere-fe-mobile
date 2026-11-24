@@ -10,10 +10,13 @@ export const sessionItems = (state: ReceptionState, sessionId: string) => {
 export const sessionDrafts = (state: ReceptionState, sessionId: string) =>
   state.drafts.filter((d) => d.sessionId === sessionId && d.waiterId === state.session?.id);
 export const sessionBill = (state: ReceptionState, sessionId: string) =>
-  state.bills.find((b) => b.sessionId === sessionId);
+  state.bills.find((b) => {
+    const session = state.tableSessions.find((s) => s.id === sessionId);
+    return session?.billId ? b.id === session.billId : b.sessionId === sessionId;
+  });
 export const sessionTotal = (state: ReceptionState, sessionId: string) =>
   sessionItems(state, sessionId)
-    .filter((i) => !["REJECTED", "CANCELLED", "VOIDED"].includes(i.status))
+    .filter((i) => !["DRAFT", "REJECTED", "CANCELLED", "VOIDED"].includes(i.status))
     .reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
 export function canViewSession(state: ReceptionState, session: TableSession) {
   if (!hasPermission(state.session, "table.read_assigned")) return false;
@@ -40,7 +43,8 @@ export function canOrder(state: ReceptionState, session: TableSession) {
     !!session.acceptedAt &&
     !session.guestLeftAt &&
     !session.closedAt &&
-    sessionBill(state, session.id)?.status === "UNPAID" &&
+    !session.paymentRequested &&
+    (!sessionBill(state, session.id) || sessionBill(state, session.id)?.status === "UNPAID") &&
     state.tables.some((t) => t.id === session.tableId && t.status === "OCCUPIED")
   );
 }
@@ -50,7 +54,7 @@ export function paymentBlockReason(state: ReceptionState, session: TableSession)
   if (state.drafts.some((d) => d.sessionId === session.id))
     return "Còn món trong giỏ chưa gửi. Hãy gửi hoặc xóa giỏ trước.";
   const items = sessionItems(state, session.id).filter(
-    (i) => !["REJECTED", "CANCELLED", "VOIDED"].includes(i.status),
+    (i) => !["DRAFT", "REJECTED", "CANCELLED", "VOIDED"].includes(i.status),
   );
   if (!items.length) return "Chưa có món hợp lệ để thanh toán.";
   if (items.some((i) => i.status !== "SERVED"))
@@ -62,7 +66,7 @@ export function serviceLabel(state: ReceptionState, session: TableSession) {
   if (session.guestLeftAt) return "Đang dọn";
   if (!session.acceptedAt) return "Chờ tiếp nhận";
   const status = sessionBill(state, session.id)?.status;
-  if (status === "PAID") return "Đã thanh toán · khách tại bàn";
-  if (status === "PAYMENT_REQUESTED") return "Chờ thanh toán";
+  if (status === "PAID") return "Đã thanh toán";
+  if (session.paymentRequested || status === "PAYMENT_REQUESTED") return "Chờ thanh toán";
   return "Đang phục vụ";
 }

@@ -143,6 +143,9 @@ export function executeCommand(
     r.history.push({ at, text: "Đã nhận tiền cọc" });
     return { state, reservationId: r.id };
   }
+  if (command.type === "deposit-link" || command.type === "deposit-cash") {
+    throw new Error("Thu cọc payOS cần máy chủ; fixture không mô phỏng thanh toán.");
+  }
   const action = command.type === "edit" ? "edit" : command.type;
   if (
     !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(
@@ -244,6 +247,7 @@ export function executeCommand(
       break;
     }
     case "assign": {
+      if (!command.tableId) throw new Error("Fixture chỉ hỗ trợ gán một bàn.");
       assertRule(canAssignTable(state, r, command.tableId, now));
       const previous = r.tableId;
       assign(r, command.tableId);

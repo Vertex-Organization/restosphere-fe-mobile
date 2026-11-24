@@ -10,7 +10,7 @@ import {
 import * as authentication from "@/features/auth/api";
 import type { ReceptionCommand, ReceptionState } from "@/features/reservations/types";
 import type { WaiterCommand } from "@/features/waiter/types";
-import { loadWorkspace, mapSnapshot, sendCommand, type Snapshot } from "./workspace-api";
+import { changeSession, loadWorkspace, mapSnapshot, sendCommand, type SessionChange, type Snapshot } from "./workspace-api";
 
 const emptyState = (): ReceptionState => ({
   version: 1,
@@ -47,6 +47,7 @@ interface Store {
   signOut(): Promise<void>;
   run(command: ReceptionCommand): Promise<string | undefined>;
   runWaiter(command: WaiterCommand): Promise<void>;
+  changeSession(command: SessionChange): Promise<void>;
   dismissNotice(): void;
   retrySave(): void;
 }
@@ -160,6 +161,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         run: command,
         runWaiter: async (value) => {
           await command(value);
+        },
+        changeSession: async (value) => {
+          if (pending.current) throw new Error("Đang gửi thao tác. Vui lòng chờ.");
+          pending.current = true;
+          setBusy(true);
+          const attempt = ++generation.current;
+          try {
+            const data = await changeSession(value);
+            if (attempt !== generation.current) throw new Error("Phiên đăng nhập đã thay đổi.");
+            apply(data);
+            setStorageError("");
+          } finally {
+            pending.current = false;
+            setBusy(false);
+          }
         },
         dismissNotice: () => setNotice(""),
         retrySave: () => {

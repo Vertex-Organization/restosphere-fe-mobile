@@ -7,6 +7,9 @@ export interface TableSession {
   id: string;
   tableId: string;
   reservationId: string;
+  billId?: string;
+  guests?: number;
+  paymentRequested?: boolean;
   waiterId?: string;
   handedOverAt: string;
   acceptedAt?: string;

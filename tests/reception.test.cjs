@@ -33,6 +33,28 @@ function input(overrides = {}) {
   };
 }
 
+test("multi-table handover validates total capacity and every selected table", () => {
+  const state = seed();
+  state.reservations = [];
+  state.tables = [
+    { id: "a", code: "A", areaId: "area", capacity: 4, status: "AVAILABLE" },
+    { id: "b", code: "B", areaId: "area", capacity: 4, status: "AVAILABLE" },
+  ];
+  const reservation = {
+    ...input({ guests: 6 }),
+    id: "multi",
+    status: "ARRIVED",
+    arrivedAt: now.toISOString(),
+    tableId: "a",
+    tableIds: ["a", "b"],
+  };
+  assert.equal(rules.canAssignTables(state, reservation, ["a", "b"], now).ok, true);
+  assert.equal(rules.canAssignTables(state, reservation, ["a"], now).ok, false);
+  assert.equal(rules.canHandover(state, reservation, now).ok, true);
+  state.tables[1].status = "OCCUPIED";
+  assert.equal(rules.canHandover(state, reservation, now).ok, false);
+});
+
 test("reservation edits preserve preorder metadata and reject invalid preorder input", () => {
   const s = seed();
   const r = get(s, "r1");

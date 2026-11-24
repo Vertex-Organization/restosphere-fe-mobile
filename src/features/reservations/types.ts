@@ -28,6 +28,8 @@ export interface ReservationInput {
   duration: number;
   areaId?: string;
   tableId?: string;
+  tableIds?: string[];
+  counter?: boolean;
   occasion?: string;
   email?: string;
   preorder?: PreorderItem[];
@@ -53,6 +55,8 @@ export interface Deposit {
   paidAt?: string;
   /** Transfer note the customer was told to use. */
   reference: string;
+  cashRequestedAt?: string;
+  payos?: { paymentId: string; orderCode: number; checkoutUrl: string; qrCode: string };
 }
 export interface TableAssignment {
   id: string;
@@ -96,7 +100,8 @@ export type ReceptionCommand =
       reason?: string;
       refundDeposit?: boolean;
     }
-  | { type: "assign"; id: string; tableId: string }
+  | { type: "assign"; id: string; tableId?: string; tableIds?: string[] }
+  | { type: "deposit-link" | "deposit-cash"; id: string }
   | { type: "check-in"; id: string; actualGuests: number }
   | { type: "handover"; id: string }
   | { type: "confirm-deposit"; id: string }
