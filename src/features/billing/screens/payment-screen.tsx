@@ -124,7 +124,7 @@ export default function PaymentScreen() {
         <>
           <Message kind="success">
             Thu ngân đã xác nhận lúc {dateTimeLabel(bill.paidAt!)}.{" "}
-            Thanh toán đủ tự đóng mọi phiên của hóa đơn và trả bàn.
+            Thanh toán đủ tự đóng mọi phiên của hóa đơn; mỗi bàn chuyển sang chờ dọn.
           </Message>
           <Button
             title="Mở kết thúc phục vụ"

@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Linking, Share, Text, View } from "react-native";
+import { PaymentQr } from "@/components/ui/payment-qr";
 import { Screen } from "@/components/layout/screen";
 import {
   Button,
@@ -166,6 +167,7 @@ export default function ReservationDetailScreen() {
           />
           {!!r.deposit?.payos?.checkoutUrl && (
             <>
+              <PaymentQr value={r.deposit.payos.qrCode || r.deposit.payos.checkoutUrl} />
               <Text selectable style={ui.text}>
                 {r.deposit.payos.checkoutUrl}
               </Text>
