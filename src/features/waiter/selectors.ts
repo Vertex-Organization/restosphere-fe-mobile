@@ -23,8 +23,18 @@ export const needsCleaning = (state: ReceptionState, session: TableSession) =>
   !!session.closedAt &&
   state.tables.some((t) => t.id === session.tableId && t.status === "CLEANING") &&
   !state.tableSessions.some(
-    (s) => s.tableId === session.tableId && !s.closedAt,
+    (s) => s.tableId === session.tableId && s.id !== session.id &&
+      (!s.closedAt || s.handedOverAt >= session.handedOverAt),
   );
+export function canChangeSession(state: ReceptionState, session: TableSession) {
+  const bill = sessionBill(state, session.id);
+  const related = state.tableSessions.filter((s) => s.id === session.id ||
+    (!!session.billId && s.billId === session.billId));
+  return related.every((s) => !s.closedAt && !s.guestLeftAt && !s.paymentRequested &&
+    (state.session?.role === "RECEPTIONIST" || s.waiterId === state.session?.id) &&
+    !state.reservations.find((r) => r.id === s.reservationId)?.deposit?.paidAt) &&
+    (!bill || (bill.status === "UNPAID" && !bill.payos));
+}
 export function canViewSession(state: ReceptionState, session: TableSession) {
   if (!hasPermission(state.session, "table.read_assigned")) return false;
   if (session.waiterId === state.session?.id) return true;

@@ -98,12 +98,10 @@ export type ReceptionCommand =
       type: "confirm" | "reject" | "cancel" | "no-show";
       id: string;
       reason?: string;
-      refundDeposit?: boolean;
     }
   | { type: "assign"; id: string; tableId?: string; tableIds?: string[] }
   | { type: "deposit-link" | "deposit-cash"; id: string }
   | { type: "check-in"; id: string; actualGuests: number }
   | { type: "handover"; id: string }
-  | { type: "confirm-deposit"; id: string }
   | { type: "read"; id?: string };
 export type RuleResult = { ok: true } | { ok: false; reason: string };

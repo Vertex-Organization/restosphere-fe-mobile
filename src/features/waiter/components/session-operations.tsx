@@ -11,7 +11,7 @@ import {
   ui,
 } from "@/components/ui";
 import { useApp } from "@/store/app-store";
-import { sessionItems } from "../selectors";
+import { canChangeSession, sessionItems } from "../selectors";
 import type { TableSession } from "../types";
 
 export function SessionOperations({ session }: { session: TableSession }) {
@@ -22,11 +22,7 @@ export function SessionOperations({ session }: { session: TableSession }) {
   const [items, setItems] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<"merge" | "split">();
   const [error, setError] = useState("");
-  const allowed = (s: TableSession) =>
-    !s.closedAt &&
-    !s.guestLeftAt &&
-    !s.paymentRequested &&
-    (state.session?.role === "RECEPTIONIST" || s.waiterId === state.session?.id);
+  const allowed = (s: TableSession) => canChangeSession(state, s);
   if (!allowed(session)) return null;
   const count = Number(guests);
   const available = state.tables.filter(

@@ -49,7 +49,9 @@ export function executeWaiterCommand(
     return state;
   }
   const session = state.tableSessions.find((s) => s.id === command.sessionId);
-  if (!session || session.closedAt) throw new Error("Không tìm thấy lượt phục vụ đang hoạt động.");
+  const afterPayment = command.type === "guest-left" || command.type === "clean";
+  if (!session || (session.closedAt && !afterPayment))
+    throw new Error("Không tìm thấy lượt phục vụ đang hoạt động.");
   const table = state.tables.find((t) => t.id === session.tableId);
   const reservation = state.reservations.find((r) => r.id === session.reservationId);
   if (!table || !reservation) throw new Error("Thông tin bàn hoặc khách không còn tồn tại.");
@@ -296,17 +298,16 @@ export function executeWaiterCommand(
     }
     case "guest-left": {
       if (!command.confirmed) throw new Error("Cần xác nhận khách thực sự đã rời bàn.");
-      if (bill.status !== "PAID" || session.guestLeftAt || table.status !== "OCCUPIED")
-        throw new Error("Chỉ xác nhận khách rời sau khi đã thanh toán và bàn còn khách.");
+      if (bill.status !== "PAID" || session.guestLeftAt || !session.closedAt)
+        throw new Error("Chỉ ghi nhận khách rời sau khi đã thanh toán.");
       session.guestLeftAt = at;
-      table.status = "CLEANING";
-      notify("Khách đã rời · cần dọn bàn");
+      notify("Đã ghi nhận khách rời bàn");
       break;
     }
     case "clean": {
       if (!command.confirmed) throw new Error("Cần xác nhận bàn thực sự đã dọn xong.");
-      if (!session.guestLeftAt || bill.status !== "PAID" || table.status !== "CLEANING")
-        throw new Error("Chỉ dọn xong khi khách đã rời và bàn đang dọn.");
+      if (!session.closedAt || bill.status !== "PAID" || table.status !== "CLEANING")
+        throw new Error("Bàn không ở trạng thái chờ dọn.");
       if (
         state.tableSessions.some(
           (s) => s.id !== session.id && s.tableId === table.id && !s.closedAt,
@@ -329,9 +330,8 @@ export function executeWaiterCommand(
         )
       )
         throw new Error("Lượt phục vụ còn món chưa xử lý.");
-      session.closedAt = at;
       reservation.status = "COMPLETED";
-      reservation.history.push({ at, text: `${staff.name} xác nhận khách rời và bàn đã dọn.` });
+      reservation.history.push({ at, text: `${staff.name} xác nhận bàn đã dọn.` });
       state.assignments.forEach((a) => {
         if (a.reservationId === reservation.id && !a.releasedAt) a.releasedAt = at;
       });

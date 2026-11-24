@@ -24,6 +24,7 @@ import {
   useWaiterAction,
 } from "@/features/waiter/components/service-ui";
 import { dateTimeLabel } from "@/utils/dates";
+import { PaymentQr } from "@/components/ui/payment-qr";
 
 export default function PaymentScreen() {
   const { state } = useApp();
@@ -81,6 +82,12 @@ export default function PaymentScreen() {
           Món hủy không tính tiền. Thu ngân xử lý hóa đơn và xác nhận thanh toán.
         </Text>
       </View>
+      {bill.status !== "PAID" && !!bill.payos?.qrCode && (
+        <View style={ui.panel}>
+          <Text style={ui.caption}>Quét mã thanh toán hóa đơn do thu ngân tạo.</Text>
+          <PaymentQr value={bill.payos.qrCode} />
+        </View>
+      )}
       {bill.status === "UNPAID" && (
         <>
           {!!reason && <Message kind="info">{reason}</Message>}

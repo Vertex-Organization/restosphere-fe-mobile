@@ -58,6 +58,17 @@ function requested() {
   return run(s, { type: "request-payment", sessionId: pendingId(s) });
 }
 
+test("only the latest session can require cleaning for a reused table", () => {
+  const s = seed();
+  const old = s.tableSessions[0];
+  old.closedAt = now.toISOString();
+  s.tables.find((t) => t.id === old.tableId).status = "CLEANING";
+  const latest = { ...old, id: "later-cycle", handedOverAt: new Date(now.getTime() + 1000).toISOString() };
+  s.tableSessions.push(latest);
+  assert.equal(selectors.needsCleaning(s, old), false);
+  assert.equal(selectors.needsCleaning(s, latest), true);
+});
+
 test("WAITER login, role routing and known permissions", async () => {
   const staff = await auth.signIn("waiter", "123456");
   assert.equal(staff.id, DEMO_WAITER.id);
@@ -370,46 +381,57 @@ test("waiter can withdraw payment request and cashier events update bill lifecyc
   assert.ok(selectors.visibleNotifications(s).some((n) => n.kind === "PAYMENT_RETURNED"));
 });
 
-test("cashier PAID retains guests and OCCUPIED table until explicit guest-left", () => {
+test("cashier PAID closes the session at once and leaves the table to be cleaned", () => {
   let s = requested();
   const sessionId = pendingId(s);
   const billId = selectors.sessionBill(s, sessionId).id;
   s = mock(s, { type: "cashier-paid", billId });
   assert.equal(selectors.sessionBill(s, sessionId).status, "PAID");
-  assert.equal(s.tables.find((t) => t.id === "A03").status, "OCCUPIED");
-  assert.equal(s.tableSessions.find((t) => t.id === sessionId).guestLeftAt, undefined);
+  const session = s.tableSessions.find((t) => t.id === sessionId);
+  assert.ok(session.closedAt, "payment closes the session");
+  assert.equal(s.tables.find((t) => t.id === "A03").status, "CLEANING");
+  assert.equal(selectors.needsCleaning(s, session), true);
+  assert.equal(s.reservations.find((r) => r.id === "r7").status, "SEATED");
   assert.throws(() => mock(s, { type: "cashier-paid", billId }));
   assert.throws(() => run(s, { type: "add-draft", sessionId, menuItemId: "water" }));
 });
-test("finish requires confirmation and cleaning cannot skip guests leaving", () => {
+test("cleaning frees the table; guest-left is optional and frees nothing", () => {
   let s = requested();
   const sessionId = pendingId(s);
   s = mock(s, { type: "cashier-paid", billId: selectors.sessionBill(s, sessionId).id });
-  assert.throws(() => run(s, { type: "clean", sessionId, confirmed: true }));
+  assert.throws(() => run(s, { type: "clean", sessionId, confirmed: false }));
   assert.throws(() => run(s, { type: "guest-left", sessionId, confirmed: false }));
   s = run(s, { type: "guest-left", sessionId, confirmed: true });
+  assert.ok(s.tableSessions.find((t) => t.id === sessionId).guestLeftAt);
   assert.equal(s.tables.find((t) => t.id === "A03").status, "CLEANING");
-  assert.equal(s.reservations.find((r) => r.id === "r7").status, "SEATED");
-  assert.throws(() => run(s, { type: "clean", sessionId, confirmed: false }));
+  assert.throws(() => run(s, { type: "guest-left", sessionId, confirmed: true }));
   s = run(s, { type: "clean", sessionId, confirmed: true });
   assert.equal(s.tables.find((t) => t.id === "A03").status, "AVAILABLE");
   assert.equal(s.reservations.find((r) => r.id === "r7").status, "COMPLETED");
   assert.ok(s.assignments.filter((a) => a.reservationId === "r7").every((a) => a.releasedAt));
-  assert.ok(s.tableSessions.find((t) => t.id === sessionId).closedAt);
+  assert.equal(selectors.needsCleaning(s, s.tableSessions.find((t) => t.id === sessionId)), false);
   assert.throws(() => run(s, { type: "clean", sessionId, confirmed: true }));
   assert.ok(s.notifications.some((n) => n.tableId === "A03" && n.title === "Bàn đã sẵn sàng"));
 });
+test("cleaning can be done without ever marking the guest as left", () => {
+  let s = requested();
+  const sessionId = pendingId(s);
+  s = mock(s, { type: "cashier-paid", billId: selectors.sessionBill(s, sessionId).id });
+  s = run(s, { type: "clean", sessionId, confirmed: true });
+  assert.equal(s.tables.find((t) => t.id === "A03").status, "AVAILABLE");
+});
 test("a second active turn prevents releasing a cleaned table", () => {
-  const s = seed();
-  const clean = s.tableSessions.find((t) => t.tableId === "A04");
-  s.tableSessions.push({ ...clean, id: "conflict" });
+  let s = requested();
+  const sessionId = pendingId(s);
+  s = mock(s, { type: "cashier-paid", billId: selectors.sessionBill(s, sessionId).id });
+  const paid = s.tableSessions.find((t) => t.id === sessionId);
+  s.tableSessions.push({ ...paid, id: "conflict", closedAt: undefined });
   assert.throws(
-    () => run(s, { type: "clean", sessionId: clean.id, confirmed: true }),
+    () => run(s, { type: "clean", sessionId, confirmed: true }),
     /lượt sử dụng khác/,
   );
-  assert.equal(s.tables.find((t) => t.id === "A04").status, "CLEANING");
-});
-test("notification reads are scoped and ready items disappear after serving", () => {
+  assert.equal(s.tables.find((t) => t.id === "A03").status, "CLEANING");
+});test("notification reads are scoped and ready items disappear after serving", () => {
   let s = seed();
   const ready = selectors.sessionItems(s, "waiter-s0").find((i) => i.status === "READY");
   s = run(s, { type: "serve", sessionId: "waiter-s0", itemId: ready.id });
@@ -553,4 +575,51 @@ test("web reservation and manager exception events reach reception notifications
     reason: "Dong y ngoai le",
   });
   assert.equal(decided.notifications[0].kind, "REQUEST_DECIDED");
+});
+test("merge and split are offered only for the waiter's own plain sessions", () => {
+  const s = accepted();
+  const session = s.tableSessions.find((t) => t.id === pendingId(s));
+  assert.equal(selectors.canChangeSession(s, session), true);
+
+  const other = { ...s, session: { ...OTHER_WAITER } };
+  assert.equal(selectors.canChangeSession(other, session), false, "another waiter is refused");
+
+  const reception = { ...s, session: { ...DEMO_STAFF } };
+  assert.equal(selectors.canChangeSession(reception, session), true, "reception is unrestricted");
+});
+
+test("merge and split are blocked once payment is asked, a payOS link exists or a deposit is paid", () => {
+  const asked = requested();
+  const askedSession = asked.tableSessions.find((t) => t.id === pendingId(asked));
+  assert.equal(selectors.canChangeSession(asked, askedSession), false, "payment requested");
+
+  const linked = accepted();
+  const linkedSession = linked.tableSessions.find((t) => t.id === pendingId(linked));
+  const bill = selectors.sessionBill(linked, linkedSession.id);
+  if (bill) bill.payos = { paymentId: "p1", orderCode: 1, qrCode: "x" };
+  assert.equal(selectors.canChangeSession(linked, linkedSession), !bill, "live payOS QR");
+
+  const deposited = accepted();
+  const depositedSession = deposited.tableSessions.find((t) => t.id === pendingId(deposited));
+  const reservation = deposited.reservations.find((r) => r.id === depositedSession.reservationId);
+  reservation.deposit = {
+    amount: 100000,
+    dueAt: now.toISOString(),
+    paidAt: now.toISOString(),
+    reference: "COC",
+  };
+  assert.equal(selectors.canChangeSession(deposited, depositedSession), false, "paid deposit");
+});
+
+test("every session of a shared bill must be allowed before the bill can be merged or split", () => {
+  const s = accepted();
+  const mine = s.tableSessions.find((t) => t.id === pendingId(s));
+  const shared = { ...mine, id: "shared-2", billId: mine.billId ?? "shared-bill", waiterId: "someone-else" };
+  mine.billId = mine.billId ?? "shared-bill";
+  s.tableSessions.push(shared);
+  assert.equal(
+    selectors.canChangeSession(s, mine),
+    false,
+    "a session of the same bill belongs to another waiter",
+  );
 });

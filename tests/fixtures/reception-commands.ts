@@ -136,16 +136,10 @@ export function executeCommand(
   }
   const r = state.reservations.find((item) => item.id === command.id);
   if (!r) throw new Error("Không tìm thấy lịch đặt.");
-  if (command.type === "confirm-deposit") {
-    if (r.status !== "PENDING" || !r.deposit || r.deposit.paidAt)
-      throw new Error("Lịch này không có tiền cọc chờ xác nhận.");
-    r.deposit.paidAt = at;
-    r.history.push({ at, text: "Đã nhận tiền cọc" });
-    return { state, reservationId: r.id };
-  }
   if (command.type === "deposit-link" || command.type === "deposit-cash") {
     throw new Error("Thu cọc payOS cần máy chủ; fixture không mô phỏng thanh toán.");
   }
+  if (command.type === "handover" && r.status === "SEATED") return { state, reservationId: r.id };
   const action = command.type === "edit" ? "edit" : command.type;
   if (
     !getReservationActions(r, now, state.session!.role, state.settings.noShowMinutes).includes(
@@ -175,12 +169,6 @@ export function executeCommand(
     case "cancel":
     case "no-show": {
       if (!command.reason?.trim()) throw new Error("Vui lòng nhập lý do.");
-      if (
-        command.type === "cancel" &&
-        r.deposit?.paidAt &&
-        typeof command.refundDeposit !== "boolean"
-      )
-        throw new Error("Vui lòng chọn có hoàn cọc cho khách hay không.");
       if (command.type === "no-show")
         assertRule(canMarkNoShow(r, now, state.settings.noShowMinutes));
       r.status =
@@ -192,8 +180,7 @@ export function executeCommand(
       r.reason = command.reason.trim();
       release(r.id);
       r.history.push({ at, text: `${STATUS_LABELS[r.status]}: ${r.reason}` });
-      if (command.type === "cancel" && r.deposit?.paidAt)
-        r.history.push({ at, text: command.refundDeposit ? "Hoàn cọc" : "Không hoàn cọc" });
+      if (r.deposit?.paidAt) r.history.push({ at, text: "Không hoàn cọc" });
       notify(
         command.type === "cancel"
           ? "Lịch bị hủy"
@@ -285,8 +272,9 @@ export function executeCommand(
         text: `Khách đã đến · ${command.actualGuests} khách thực tế.`,
       });
       notify("Khách đã check-in", r);
-      break;
+      return executeCommand(state, { type: "handover", id: r.id }, now);
     case "handover":
+      if (r.status === "SEATED") break;
       assertRule(canHandover(state, r, now));
       r.status = "SEATED";
       r.handedOverAt = at;

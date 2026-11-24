@@ -8,4 +8,5 @@ export interface Bill {
   amount?: number;
   requestedAmount?: number;
   currentAmount?: number;
+  payos?: { paymentId: string; qrCode?: string; checkoutUrl?: string; orderCode: number } | null;
 }

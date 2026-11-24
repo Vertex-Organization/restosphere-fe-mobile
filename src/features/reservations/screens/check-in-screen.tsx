@@ -7,7 +7,7 @@ import { useApp } from "@/store/app-store";
 import { dateTimeLabel } from "@/utils/dates";
 import { ReservationListItem } from "../components/reservation-list-item";
 import { errorField } from "@/features/auth/api";
-import { getAvailableTables, isTableAvailableForTimeRange, matchesReservation } from "../rules";
+import { canHandover, matchesReservation } from "../rules";
 import type { Reservation } from "../types";
 export default function CheckInScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -67,31 +67,7 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
   const table = state.tables.find((t) => t.id === r.tableId);
   const actualCount = Number(actual);
   const badCount = !Number.isInteger(actualCount) || actualCount < 1;
-  const tooMany = table && actualCount > table.capacity;
-  const availability = table
-    ? isTableAvailableForTimeRange(
-        state,
-        table,
-        {
-          ...r,
-          startsAt: now.toISOString(),
-          guests: Number(actual),
-        },
-        r.id,
-        now,
-      )
-    : undefined;
-  const needsTable = !table || !availability?.ok || table.status !== "AVAILABLE";
-  // Without a fitting free table now, the party can only be seated by splitting it or asking the manager.
-  const noFittingTable =
-    !badCount &&
-    needsTable &&
-    !getAvailableTables(
-      state,
-      { ...r, startsAt: now.toISOString(), guests: actualCount },
-      r.id,
-      now,
-    ).some((t) => t.status === "AVAILABLE");
+  const availability = canHandover(state, { ...r, status: "ARRIVED", actualGuests: actualCount }, now);
   return (
     <Screen>
       <Text style={ui.heading}>
@@ -110,45 +86,20 @@ function CheckInForm({ reservation: r }: { reservation: Reservation }) {
         onChangeText={setActual}
         error={field === "actualGuests" ? error : undefined}
       />
-      {tooMany && (
-        <Message>
-          Số khách vượt sức chứa bàn {table.code}. Có thể ghi nhận khách đã đến, nhưng cần đổi bàn
-          phù hợp trước khi bàn giao.
-        </Message>
-      )}
-      {!table && (
-        <Message kind="info">
-          Lịch chưa có bàn. Hãy chọn bàn trước khi bàn giao cho phục vụ.
-        </Message>
-      )}
-      {!tooMany && availability && !availability.ok && (
-        <Message>
-          {availability.reason} Có thể ghi nhận khách đã đến, sau đó chọn bàn khác trước khi bàn
-          giao.
-        </Message>
-      )}
-      {noFittingTable && (
-        <Message>
-          Hiện không còn bàn trống nào đủ chỗ cho {actualCount} khách trong khu này. Hãy chờ bàn
-          trống, đổi khu hoặc nhờ quản lý duyệt ở màn chi tiết lịch đặt.
-        </Message>
-      )}
+      {!availability.ok && <Message>{availability.reason} Hãy xếp bàn phù hợp trước khi check-in.</Message>}
       {!!error && field !== "actualGuests" && <Message>{error}</Message>}
       <Message kind="info">
-        Bước này chỉ ghi nhận khách đã đến. Bàn chuyển sang “đang sử dụng” khi bàn giao cho phục vụ.
+        Check-in mở phiên phục vụ cho mọi bàn đã xếp, dùng chung một hóa đơn và chuyển bàn sang đang sử dụng.
       </Message>
       <Button
         title="Xác nhận khách đã đến"
+        disabled={badCount || !availability.ok}
         onPress={async () => {
           setError("");
           setField("");
           try {
             await run({ type: "check-in", id: r.id, actualGuests: Number(actual) });
-            router.replace(
-              needsTable
-                ? `/reception/reservations/assign?id=${r.id}`
-                : `/reception/handover?id=${r.id}`,
-            );
+            router.replace(`/reception/reservations/${r.id}`);
           } catch (e) {
             setError((e as Error).message);
             setField(errorField(e) ?? "");

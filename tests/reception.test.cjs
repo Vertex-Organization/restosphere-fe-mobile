@@ -226,13 +226,15 @@ test("sửa thông tin phải kiểm tra lại sức chứa và xung đột", ()
     /cần giữ một bàn/,
   );
 });
-test("check-in ghi nhận thời điểm và số thực tế, không chiếm bàn hay check-in trùng", () => {
-  const s = run(seed(), { type: "check-in", id: "r3", actualGuests: 5 });
+test("check-in mở phiên và chiếm bàn, chặn quá sức chứa và check-in trùng", () => {
+  assert.throws(() => run(seed(), { type: "check-in", id: "r3", actualGuests: 5 }), /sức chứa/);
+  const s = run(seed(), { type: "check-in", id: "r3", actualGuests: 4 });
   const r = get(s, "r3");
-  assert.equal(r.status, "ARRIVED");
-  assert.equal(r.actualGuests, 5);
+  assert.equal(r.status, "SEATED");
+  assert.equal(r.actualGuests, 4);
   assert.equal(r.arrivedAt, now.toISOString());
-  assert.equal(s.tables.find((t) => t.id === "A02").status, "AVAILABLE");
+  assert.ok(s.tableSessions.some((t) => t.reservationId === r.id));
+  assert.equal(s.tables.find((t) => t.id === "A02").status, "OCCUPIED");
   assert.throws(() => run(s, { type: "check-in", id: "r3", actualGuests: 4 }), /trước đó/);
   assert.equal(rules.canHandover(s, r, now).ok, false);
 });
@@ -245,7 +247,8 @@ test("bàn giao chuyển SEATED + OCCUPIED, khóa thao tác của lễ tân", ()
   assert.equal(get(s, "r6").status, "SEATED");
   assert.equal(s.tables.find((t) => t.id === "B01").status, "OCCUPIED");
   assert.deepEqual(rules.getReservationActions(get(s, "r6"), now), []);
-  for (const type of ["edit", "assign", "check-in", "cancel", "handover"])
+  assert.equal(run(s, { type: "handover", id: "r6" }).tableSessions.length, s.tableSessions.length);
+  for (const type of ["edit", "assign", "check-in", "cancel"])
     assert.throws(() =>
       run(s, {
         type,
@@ -325,7 +328,7 @@ test("NO_SHOW cần 30 phút chờ, lý do và giải phóng giữ chỗ", () =>
     0,
   );
 });
-test("hủy lịch đã cọc phải chọn hoàn cọc hay không", () => {
+test("hủy lịch đã cọc không bao giờ hoàn cọc và không hỏi hoàn cọc", () => {
   const s = seed();
   get(s, "r3").deposit = {
     amount: 100000,
@@ -333,10 +336,14 @@ test("hủy lịch đã cọc phải chọn hoàn cọc hay không", () => {
     paidAt: now.toISOString(),
     reference: "COC R3",
   };
-  assert.throws(() => run(s, { type: "cancel", id: "r3", reason: "Khách gọi hủy" }), /hoàn cọc/);
-  const after = run(s, { type: "cancel", id: "r3", reason: "Khách gọi hủy", refundDeposit: false });
+  const after = run(s, { type: "cancel", id: "r3", reason: "Khách báo bận" });
   assert.equal(get(after, "r3").status, "CANCELLED");
   assert.equal(get(after, "r3").history.at(-1).text, "Không hoàn cọc");
+  assert.ok(get(after, "r3").deposit.paidAt, "the deposit stays recorded as received");
+});
+test("lễ tân không có lệnh nhận cọc: tiền cọc chỉ vào qua payOS hoặc thu ngân", () => {
+  assert.throws(() => run(seed(), { type: "confirm-deposit", id: "r3" }));
+  assert.throws(() => run(seed(), { type: "deposit-cash", id: "r3" }), /máy chủ/);
 });
 test("hủy / từ chối yêu cầu lý do và không giữ chỗ nữa", () => {
   const s = run(seed(), {
@@ -406,9 +413,9 @@ test("dashboard tính lại từ state sau xác nhận / check-in / bàn giao", 
   s = run(s, { type: "confirm", id: "r1" });
   assert.equal(rules.getReceptionDashboardSummary(s, now).pending, before.pending - 1);
   s = run(s, { type: "check-in", id: "r3", actualGuests: 4 });
-  assert.equal(rules.getReceptionDashboardSummary(s, now).arrived, before.arrived + 1);
+  assert.equal(rules.getReceptionDashboardSummary(s, now).arrived, before.arrived);
   s = run(s, { type: "handover", id: "r6" });
-  assert.equal(rules.getReceptionDashboardSummary(s, now).available, before.available - 1);
+  assert.equal(rules.getReceptionDashboardSummary(s, now).available, before.available - 2);
 });
 test("tìm tên không dấu, số điện thoại, mã; lọc ngày và trạng thái", () => {
   const s = seed();

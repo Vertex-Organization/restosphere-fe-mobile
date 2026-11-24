@@ -193,6 +193,14 @@ export function applyMockServiceEvent(
     bill.status = "PAID";
     bill.paidAt = at;
     sessionId = bill.sessionId;
+    // Payment closes every session of the bill at once and leaves each table to be cleaned.
+    for (const s of state.tableSessions.filter(
+      (x) => (x.billId ? x.billId === bill.id : x.id === bill.sessionId) && !x.closedAt,
+    )) {
+      s.closedAt = at;
+      const t = state.tables.find((x) => x.id === s.tableId);
+      if (t) t.status = "CLEANING";
+    }
     title = "Thu ngân đã xác nhận thanh toán";
     kind = "PAYMENT";
   } else {
@@ -236,7 +244,9 @@ export function applyMockServiceEvent(
     }
   }
   const session = state.tableSessions.find((s) => s.id === sessionId);
-  if (!session || session.closedAt) throw new Error("Lượt phục vụ đã kết thúc.");
+  // Payment itself closes the session, so only the other events need it still open.
+  if (!session || (session.closedAt && event.type !== "cashier-paid"))
+    throw new Error("Lượt phục vụ đã kết thúc.");
   state.waiterNotifications.unshift({
     id: `wn${state.nextId++}`,
     sessionId,
